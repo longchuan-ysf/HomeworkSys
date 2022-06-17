@@ -117,6 +117,7 @@ DRESULT disk_read (
 //*buff:发送数据首地址
 //sector:扇区地址
 //count:需要写入的扇区数 
+extern void delay_ms(u16 nms);
 DRESULT disk_write (
 	BYTE pdrv,			/* Physical drive nmuber to identify the drive */
 	const BYTE *buff,	/* Data to be written */
@@ -124,17 +125,23 @@ DRESULT disk_write (
 	UINT count			/* Number of sectors to write */
 )
 {
+	char cnt;
 	u8 res=0;  
     if (!count)return RES_PARERR;//count不能等于0，否则返回参数错误		 	 
 	switch(pdrv)
 	{
 		case SD_CARD://SD卡
 			res=SD_WriteDisk((u8*)buff,sector,count);
+			cnt=0;
 			while(res)//写出错
 			{
 				SD_Init();	//重新初始化SD卡
+				cnt++;
+				delay_ms(1000);
 				res=SD_WriteDisk((u8*)buff,sector,count);	
-				//printf("sd wr error:%d\r\n",res);
+				printf("sd wr error:%d\r\n",res);
+				if(cnt>=10)
+					break;
 			}
 			break;
 		case EX_FLASH://外部flash

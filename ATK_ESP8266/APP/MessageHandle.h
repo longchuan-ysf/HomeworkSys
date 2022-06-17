@@ -55,59 +55,20 @@ typedef struct
 	uint8_t* ExName;//文件名指针数组
 	uint8_t *ContentType;//文件大小数组
 }Http_File_Attribute;
-typedef struct 
-{
-    char picname[32];
-    unsigned int picsize;
-}PicParm_t;
 
-#define MAX_SIZE_HEARER 2048
 
 //http版本
 #define HTTP1_1 "HTTP/1.1"
 #define HTTP2_0 "HTTP/2.0"
-
-
-//hear普通头
-#define HTTP_DEFAULT_HEADER         "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:63.0) Gecko/20100101 Firefox/63.0\r\n"   \
-				                    "Connection: keep-alive\r\n" \
-                                    "Cache-Control: no-cache\r\n"           \
-                                    "Content-Type: application/json\r\n"   \
-                                    "Accept: */*"
-
-
-//http上传文件所需要的头//"enctype: multipart/form-data\r\n"
-#define HTTP_POST_PIC_HEAD 	"POST %s HTTP/1.1\r\n"\
-                            "User-Agent: PostmanRuntime/7.24.1\r\n"\
-                            "Accept: */*\r\n"\
-                            "Host: %s\r\n"\
-                            "Accept-Encoding: gzip, deflate, br\r\n" \
-                            "Connection: keep-alive\r\n" \
-                            "Content-Type: multipart/form-data; boundary=%s\r\n"\
-                            "Content-Length: %d\r\n\r\n"\
-
-					
-					
-#define UPLOAD_REQUEST	"Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n" \
-                        "Content-Type: image/jpeg\r\n\r\n"
 						
-#define UPLOAD_END		"Content-Disposition: form-data; name=\"file\"; filename=\"\"\r\n" \
-                        "Content-Type: application/octet-stream\r\n\r\n"
+#define UPLOAD_END  "Content-Disposition: form-data; name=\"file\"; filename=\"\"\r\n"\
+					"Content-Type: application/octet-stream\r\n\r\n"
+
 					
-#define BOUNDARY		"----WebKitFormBoundarysB16cMSV2A6aSwsK"
-                        
-typedef struct
-{
-    char host[16];
-    char url[128]; //包含参数，参数从url中传入
-    int  ispostpic; //是否需要上传图片
-    int  port;
-    int  method;
-    int  timeouts;
-    int  timeoutus;
-    char *content; //需要申请空间，存放数据
-    PicParm_t picparm; //图片参数
-}HttpParam_t;
+#define BOUNDARY		"----WebKitFormBoundaryO2WAD3vh5VDNQCJf"
+
+
+                
 
 extern void  MessageRxHandle(void);
 

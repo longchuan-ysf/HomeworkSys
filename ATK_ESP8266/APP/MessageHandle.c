@@ -15,6 +15,34 @@
 #include "malloc.h"
 #include "common.h"
 
+#define TEST_POST 0
+
+#if TEST_POST==1
+const char testhead[] =\
+"POST /HFS/ HTTP/1.1\r\n"\
+"Host: 192.168.86.101\r\n"\
+"Connection: keep-alive\r\n"\
+"Content-Length: 137340\r\n"\
+"Cache-Control: max-age=0\r\n"\
+"Upgrade-Insecure-Requests: 1\r\n"\
+"Origin: http://192.168.86.101\r\n"\
+"Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryO2WAD3vh5VDNQCJf\r\n"\
+"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.124 Safari/537.36 Edg/102.0.1245.41\r\n"\
+"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\r\n"\
+"Referer: http://192.168.86.101/HFS/\r\n"\
+"Accept-Encoding: gzip, deflate\r\n"\
+"Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6\r\n"\
+"Cookie: HFS_SID_=0.165556978899986\r\n \r\n"\
+"------WebKitFormBoundaryO2WAD3vh5VDNQCJf\r\n"\
+"Content-Disposition: form-data; name=\"file\"; filename=\"zhongli.jpg\"\r\n"\
+"Content-Type: image/jpeg\r\n\r\n";
+
+const char testend[] =\
+"\r\n------WebKitFormBoundaryO2WAD3vh5VDNQCJf\r\n"\
+"Content-Disposition: form-data; name=\"file\"; filename=""\r\n"\
+"Content-Type: application/octet-stream\r\n\r\n"\
+"\r\n------WebKitFormBoundaryO2WAD3vh5VDNQCJf--\r\n"; 
+#endif
 
 Http_Respon  HttpRespon;//http的响应头解析
 File_Scan pbuf;//目录扫描结果存放
@@ -146,7 +174,7 @@ void MessageTxInit(uint8_t method,uint8_t *url)
 		case GET:
 		{
 			mymemset(p,0,128);
-			sprintf((char *)p,"GET %s HTTP/1.0\r\n",url);
+			sprintf((char *)p,"GET %s HTTP/1.1\r\n",url);
 			len = strlen((char *)p);
 			mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],p,len);
 			BackGroundCtrl.Message_TxLen  += len;
@@ -180,7 +208,7 @@ void MessageTxInit(uint8_t method,uint8_t *url)
 		case POST:
 		{
 			mymemset(p,0,128);
-			sprintf((char *)p,"POST %s HTTP/1.0\r\n",url);
+			sprintf((char *)p,"POST %s HTTP/1.1\r\n",url);
 			len = strlen((char *)p);
 			mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],p,len);
 			BackGroundCtrl.Message_TxLen  += len;
@@ -190,13 +218,13 @@ void MessageTxInit(uint8_t method,uint8_t *url)
 			len = strlen((char *)p);
 			mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],p,len);
 			BackGroundCtrl.Message_TxLen  += len;
-			
-			mymemset(p,0,128);
-			sprintf((char *)p,"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101Firefox/101.0\r\n");
+   
+            mymemset(p,0,128);
+			sprintf((char *)p,"Accept: */*\r\n");
 			len = strlen((char *)p);
 			mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],p,len);
 			BackGroundCtrl.Message_TxLen  += len;
-			
+            
 			mymemset(p,0,128);
 			sprintf((char *)p,"Content-Type: multipart/form-data; boundary=%s\r\n",BOUNDARY);
 			len = strlen((char *)p);
@@ -232,7 +260,7 @@ void MessageTxInit(uint8_t method,uint8_t *url)
 void MessageTx(uint8_t method,uint8_t *data,uint32_t datelen)
 {
 	
-	printf("BackGround send:%d\r\n",BackGroundCtrl.Message_TxLen);
+	printf("BackGround send:%d\r\n data:\r\n%s\r\n",BackGroundCtrl.Message_TxLen,BackGroundCtrl.Message_TXBuffer);
 	atk_8266_quit_trans();
 	atk_8266_send_cmd("AT+CIPSEND","OK",200);         //开始透传  
 	BackGroundCtrl.BackgroundSend(BackGroundCtrl.Message_TXBuffer,BackGroundCtrl.Message_TxLen);
@@ -318,7 +346,7 @@ uint8_t Http_Save_Date(uint8_t *data,uint32_t len)
 		OS_CRITICAL_ENTER();		//临界区
 	#endif
 	//printf("start saving data\r\n");	
-	result = f_write(&File,data,len,(UINT *)&bread); //读取数据
+	result = f_write(&File,data,len,(UINT *)&bread); 
 	if((result != FR_OK)) 	
 	{
 		printf("write %s  failed,result = %d\r\n",filepath,result);
@@ -447,6 +475,8 @@ void test_ff(char* scan_dir,char* choose_file)
  **/
 void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 {
+    #if TEST_POST==0
+	
 	uint8_t *pName,*boundary,*ContentType,*ContentLenTXT,*ContentDisposition,*EndMsg;
 	uint8_t i;
 	uint32_t DateLen,BoundaryLen,ContentTxtLen,ContentTypeLen,DispostionLen,EndMsgLen;
@@ -496,10 +526,10 @@ void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 		myfree(SRAMIN,ContentLenTXT);
 		return;
 	}
-	//分割线
+	//开始分割线
 	mymemset(boundary,0,128);
 	sprintf((char *)boundary,"--%s\r\n",BOUNDARY);
-	BoundaryLen = strlen((char *)ContentDisposition);
+	BoundaryLen = strlen((char *)boundary);
 	
 	//数据类型
 	DateLen = 0;
@@ -510,14 +540,14 @@ void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 		if(!strcasecmp((char *)pName,(char *)HttpFileAttribute[i].ExName))
 		{		
 			mymemset(ContentType,0,128);
-			sprintf((char *)ContentType,"Content-Type: %s\r\n",HttpFileAttribute[i].ContentType);
+			sprintf((char *)ContentType,"Content-Type: %s\r\n\r\n",HttpFileAttribute[i].ContentType);
 			ContentTypeLen = strlen((char *)ContentType);
 			break;
 		}
 	}
 	//默认文件名
 	mymemset(ContentDisposition,0,128);
-	sprintf((char *)ContentDisposition,"Content-Disposition: filename=\"%s\"\r\n\r\n",FileName);
+	sprintf((char *)ContentDisposition,"Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n",FileName);
 	DispostionLen = strlen((char *)ContentDisposition);
 	
 	
@@ -529,7 +559,7 @@ void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 	
 	//数据长度= 分割线      + 数据类型       + 默认文件名    + 文件大小  + 结束符
 	DateLen = BoundaryLen + ContentTypeLen + DispostionLen + FileLen + EndMsgLen;
-	
+	//DateLen = FileLen;
 	mymemset(ContentLenTXT,0,128);
 	sprintf((char *)ContentLenTXT,"Content-Length: %d\r\n\r\n",DateLen);
 	ContentTxtLen = strlen((char *)ContentLenTXT);
@@ -542,13 +572,14 @@ void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 	mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],boundary,BoundaryLen);
 	BackGroundCtrl.Message_TxLen  += BoundaryLen;
 	
+	//加入文件名
+	mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],ContentDisposition,DispostionLen);
+	BackGroundCtrl.Message_TxLen  += DispostionLen;
+	
 	//加入文件属性
 	mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],ContentType,ContentTypeLen);
 	BackGroundCtrl.Message_TxLen  += ContentTypeLen;
 	
-	//加入文件名
-	mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],ContentDisposition,DispostionLen);
-	BackGroundCtrl.Message_TxLen  += DispostionLen;
 	
 	//加入数据
 	mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],FileDate,FileLen);
@@ -563,6 +594,26 @@ void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 	myfree(SRAMIN,ContentDisposition);
 	myfree(SRAMIN,EndMsg);
 	myfree(SRAMIN,ContentLenTXT);
+    #else
+    //初始化
+	BackGroundCtrl.Message_TxLen = 0;
+	mymemset(BackGroundCtrl.Message_TXBuffer,0,BackGroundCtrl.MaxTxBufferLen);
+    uint16_t headLen,endlen;
+
+    headLen = strlen((char *)&testhead[0]);
+    mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen], (void *)&testhead[0],headLen);
+    BackGroundCtrl.Message_TxLen += headLen;
+
+ 
+    mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen], FileDate,FileLen);
+    BackGroundCtrl.Message_TxLen += FileLen;
+
+    endlen = strlen((char *)&testend[0]);
+    mymemcpy(&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen], (void *)&testend[0],endlen);
+    BackGroundCtrl.Message_TxLen += endlen;
+    
+    #endif
+ 
 }
 
  /**
@@ -594,9 +645,10 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
 
 	
-	
+	#if TEST_POST==0
 	MessageTxInit(POST,url);
-	
+	#endif
+    
 	PathLen = strlen((char *)FileName)+strlen("0:/update/")+1;//1是结束符\0
 	filepath = mymalloc(SRAMIN,PathLen);	//申请内存
 	
@@ -612,7 +664,7 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 		goto post_return ;
 	}	
 	
-	printf("open %s\r\n",filepath);
+	printf("f_stat ok,filesize=%lld open %s\r\n",fno->fsize, filepath);
 	result = f_open(&File,(const TCHAR*)filepath,FA_READ);	//打开文件
 
 	if((result != FR_OK)) 	
@@ -624,7 +676,7 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 	
 
 	pdata = mymalloc(SRAMEX,fno->fsize);
-	//printf("start saving data\r\n");	
+	printf("open %s OK start read\r\n",filepath);
 	result = f_read(&File,pdata,fno->fsize,(UINT *)&bread); //读取数据
 	if((result != FR_OK)) 	
 	{
@@ -644,246 +696,21 @@ post_return:
 		
 	return ;
 }
-int makehttprotocol(HttpParam_t httpparam, char* httppack)
-{
-    char *header;  //需要异常判断大小
-    char *startmsg;
-    char *endmsg;
-    char *request;
-    char *http_boundary;
-    int startboundarylen;
-    int endboundarylen;
 
-  //  int Content_Length;
-    int headerlen;
-   // int tolsize;
-	int returnlen;
-	
-	returnlen = 0;
-	header = mymalloc(SRAMEX,MAX_SIZE_HEARER);	//申请内存
-	startmsg = mymalloc(SRAMEX,128);
-	endmsg = mymalloc(SRAMEX,256);
-	request = mymalloc(SRAMEX,256);
-	http_boundary = mymalloc(SRAMEX,64);
-	
-    if (httpparam.method == GET)
-    {
-
-        if (httpparam.url[0] == 0) {
-            sprintf(httppack, "GET / %s\r\n", HTTP1_1);
-        }
-        else {
-            sprintf(httppack, "GET %s %s\r\n", httpparam.url, HTTP1_1);
-        }
-
-        //请求头： HTTP_DEFAULT_HEADER
-        sprintf(httppack, "%s%s\r\n", httppack, HTTP_DEFAULT_HEADER);
-        headerlen = sprintf(httppack, "%sHost: %s:%d\r\n", httppack, httpparam.host, httpparam.port);
-        if (httpparam.content != NULL)
-        {
-            sprintf(httppack, "%sContent-Length: %d\r\n\r\n", httppack, httpparam.picparm.picsize);
-        }
-        else {
-            sprintf(httppack, "%s\r\n", httppack);
-        }
-        returnlen = httpparam.picparm.picsize + headerlen;
-		goto makehttprotocol_return;
-    }
-    else if (httpparam.method == POST)
-    {
-        if (httpparam.ispostpic == 0) //不上传图片，只是简单的post数据
-        {
-            if (httpparam.url[0] == NULL) {
-                sprintf(httppack, "POST / %s\r\n", HTTP1_1);
-            }
-            else {
-                sprintf(httppack, "POST %s %s\r\n", httpparam.url, HTTP1_1);
-            }
-
-            //请求头： HTTP_DEFAULT_HEADER
-            sprintf(httppack, "%s%s\r\n", httppack, HTTP_DEFAULT_HEADER);
-            headerlen = sprintf(httppack, "%sHost: %s:%d\r\n", httppack, httpparam.host, httpparam.port);
-            if (httpparam.content != NULL)
-            {
-                sprintf(httppack, "%sContent-Length: %d\r\n\r\n", httppack, httpparam.picparm.picsize);
-            }
-            else {
-                sprintf(httppack, "%s\r\n", httppack);
-            }
-
-            sprintf(httppack, "%s%s\r\n", httppack, httpparam.content);
-            returnlen = httpparam.picparm.picsize + headerlen;
-			goto makehttprotocol_return;
-
-        }
-        else if (httpparam.ispostpic == 1) //上传图片
-        {
-
-            long long int timestamp;
-  
-            timestamp = 112131233232;
-            //1. 获取http_boundary
-            sprintf((char *)http_boundary, "----------------------------%lld", timestamp);
-            //2. start boundary
-            startboundarylen = sprintf(startmsg, "--%s\r\n", http_boundary);
-            //3. end boundart
-            endboundarylen = sprintf(endmsg, "\r\n--%s\r\n"UPLOAD_END"\r\n--%s--\r\n", http_boundary,http_boundary);
-            //4. 
-			
-            int requelen = sprintf(request, UPLOAD_REQUEST, httpparam.picparm.picname);
-            int Content_Length = requelen + startboundarylen + httpparam.picparm.picsize + endboundarylen;
-            int headerlen = sprintf(header, HTTP_POST_PIC_HEAD, httpparam.url, httpparam.host, http_boundary, Content_Length);
-            int tolsize = Content_Length + strlen(HTTP_POST_PIC_HEAD) + 256; //加256防止溢出
-
-            memcpy(httppack, header, headerlen);
-            memcpy(httppack + headerlen, startmsg, startboundarylen);
-            memcpy(httppack + headerlen + startboundarylen, request, requelen);
-            memcpy(httppack + headerlen + startboundarylen + requelen, httpparam.content, httpparam.picparm.picsize);
-            memcpy(httppack + headerlen + startboundarylen + requelen + httpparam.picparm.picsize, endmsg, endboundarylen);
-
-            returnlen = tolsize;
-			goto makehttprotocol_return;
-        }
-
-    }
-makehttprotocol_return:
-	 myfree(SRAMEX,header);	//申请内存
-	 myfree(SRAMEX,startmsg);
-	 myfree(SRAMEX,endmsg);
-	 myfree(SRAMEX,request);
-	 myfree(SRAMEX,http_boundary);
-	
-    return returnlen;
-}
-
-int http(HttpParam_t httpparam, char* content, int len)
-{
-    int rc = 0;
-    char* httppack;
-    httppack = (char *)mymalloc(SRAMEX,len + 512); //假设http头长度有512,http上传的最终头
-    mymemset(httppack, 0, sizeof(len + 512));
-
-
-   
-
-    rc = makehttprotocol(httpparam, httppack);
-    if (rc < 0)
-    {
-        myfree(SRAMEX,httppack);
-        return rc;
-    }
-	mymemcpy(BackGroundCtrl.Message_TXBuffer,httppack,rc);
-	BackGroundCtrl.Message_TxLen = rc;
-	printf("BackGround send:%d\r\n",BackGroundCtrl.Message_TxLen);
-	atk_8266_quit_trans();
-	atk_8266_send_cmd("AT+CIPSEND","OK",200);         //开始透传  
-	BackGroundCtrl.BackgroundSend(BackGroundCtrl.Message_TXBuffer,BackGroundCtrl.Message_TxLen);
-	printf("BackGround send:ok\r\n");
-    myfree(SRAMEX,httppack);
-    return 0;
-}
 void test_http_post()
 {
-#if 1
 	HttpRespon.Method = POST;//标记等待GET回复
 	OS_ERR err;
 	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
 	Http_Post_Date("zhongli.jpg","/HFS/");
 
-	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
-#else
-
-	HttpParam_t httpparam;
-	int PathLen,re;
-	char * pdata;
-	char *filepath;
-	FRESULT result;
-	UINT bread;
-    memset(httpparam.host, 0, sizeof(httpparam.host));
-    memset(httpparam.url, 0, sizeof(httpparam.url));
-    strcpy(httpparam.host, "192.168.86.101");
-    strcpy(httpparam.url, "/HFS/"); //后面的id是我们项目所需要的参数
-    strcpy(httpparam.picparm.picname, "zhongli.jpg");
-    httpparam.ispostpic = 1;
-    httpparam.port = 80;
-    httpparam.method = POST;
-    httpparam.timeouts = 1;
-    httpparam.timeoutus = 0;
-	
-	OS_ERR err;
-	FIL File , File1;
-	FILINFO* fno;
-
-	#if SYSTEM_SUPPORT_OS
-		CPU_SR_ALLOC();
-	#endif
-
-	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
-	#if SYSTEM_SUPPORT_OS
-	OS_CRITICAL_ENTER();		//临界区
-	#endif
-	HttpRespon.Method = POST;//标记等待POST回复
-	
-	PathLen = strlen((char *)httpparam.picparm.picname)+strlen("0:/update/")+1;//1是结束符\0
-	filepath = mymalloc(SRAMIN,PathLen);	//申请内存
-	
-	mymemset(filepath,0,PathLen);
-	sprintf(filepath,"0:/update/%s",httpparam.picparm.picname);
-	
-	
-	fno = (FILINFO*)mymalloc(SRAMIN,sizeof(FILINFO));
-	result = f_stat (filepath,fno);	
-	if((result != FR_OK)) 	
-	{
-		printf("get %s state  failed,result = %d\r\n",filepath,result);
-		goto testpost_return ;
-	}
-	httpparam.picparm.picsize=fno->fsize;
-
-	printf("get the size is: %d\r\n", httpparam.picparm.picsize);
-	printf("open %s\r\n",filepath);
-	result = f_open(&File,(const TCHAR*)filepath,FA_READ);	//打开文件
-
-	if((result != FR_OK)) 	
-	{
-		printf("open %s  failed,result = %d\r\n",filepath,result);
-		goto testpost_return ;
-	}	
-	
-	printf("open %s OK,start read\r\n",filepath);
-
-	httpparam.content = mymalloc(SRAMEX,fno->fsize);
-	memset(httpparam.content, 0, sizeof(httpparam.picparm.picsize));
-	
-	result = f_read(&File,httpparam.content,fno->fsize,(UINT *)&bread); //读取数据
-	if((result != FR_OK)) 	
-	{
-		printf("write %s  failed,result = %d\r\n",filepath,result);
-
-		goto testpost_return ; 
-	}
-	result = f_open(&File1,(const TCHAR*)"0:/update/backup.jpg",FA_WRITE|FA_CREATE_ALWAYS);	//打开文件
-	
-	result = f_write(&File1,httpparam.content,fno->fsize,(UINT *)&bread); //读取数据
-	
-	printf("read %s OK,start make http\r\n",filepath);
-    re = http(httpparam, httpparam.content, httpparam.picparm.picsize);
-
-	testpost_return:
-	f_close(&File);			//关闭文件
-	f_close(&File1);			//关闭文件
-	#if SYSTEM_SUPPORT_OS
-		OS_CRITICAL_EXIT();	//退出临界区
-	#endif
-	myfree(SRAMIN,filepath);
-	myfree(SRAMIN,fno);
-	myfree(SRAMEX,pdata);
-	myfree(SRAMEX,httpparam.content);
-	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
-#endif
-	
-	
-    
+	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量	
+  
+}
+void test_post(void)
+{
+    BackGroundCtrl.Message_TxLen = 0;
+	memset(BackGroundCtrl.Message_TXBuffer,0,BackGroundCtrl.MaxTxBufferLen);
 }
  /**
 ****************************************************************************************
@@ -1055,9 +882,7 @@ void HTTP_Handle(uint8_t *data,uint16_t len)
 		{
 			printf("data save err \r\n");
 			goto http_return;
-		}
-		
-		
+		}	
 	}
 http_return:
 	myfree(SRAMIN,HttpRespon.ContentDisposition);
