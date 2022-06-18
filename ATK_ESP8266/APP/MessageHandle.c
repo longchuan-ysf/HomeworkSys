@@ -257,7 +257,7 @@ void MessageTxInit(uint8_t method,uint8_t *url)
 @note:     添加http请求数据，并发送
 ****************************************************************************************
  **/
-void MessageTx(uint8_t method,uint8_t *data,uint32_t datelen)
+void MessageTx(void)
 {
 	
 	printf("BackGround send:%d\r\n data:\r\n%s\r\n",BackGroundCtrl.Message_TxLen,BackGroundCtrl.Message_TXBuffer);
@@ -275,7 +275,7 @@ void test_http_get()
 	char url[] = "/HFS/test.jpg";
 	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
 	MessageTxInit(GET,(uint8_t *)&url[0]);	
-	MessageTx(GET,NULL,0);
+	MessageTx();
 	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
 	HttpRespon.Method = GET;//标记等待GET回复
 
@@ -685,7 +685,7 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 		goto post_return ; 
 	}
 	HTTP_Post_AddFileInfo(FileName,(uint8_t *)pdata,fno->fsize);	
-	MessageTx(POST,NULL ,0);
+	MessageTx();
 post_return:
 	f_close(&File);			//关闭文件
 	
@@ -709,8 +709,118 @@ void test_http_post()
 }
 void test_post(void)
 {
+    char result;
+	int bread;
+	FIL File;
+    
     BackGroundCtrl.Message_TxLen = 0;
 	memset(BackGroundCtrl.Message_TXBuffer,0,BackGroundCtrl.MaxTxBufferLen);
+
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"POST /HFS/ HTTP/1.1\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Host: 192.168.86.101\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Connection: keep-alive\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Content-Length: 137340\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Cache-Control: max-age=0\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Upgrade-Insecure-Requests: 1\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Origin: http://192.168.86.101\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryJVDvW59t5ghf4dVJ\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.124 Safari/537.36 Edg/102.0.1245.41\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Referer: http://192.168.86.101/HFS/\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Accept-Encoding: gzip, deflate\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Cookie: HFS_SID_=0.0328552364371717\r\n\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"------WebKitFormBoundaryJVDvW59t5ghf4dVJ\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Content-Disposition: form-data; name=\"file\"; filename=\"zhongli.jpg\"\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Content-Type: image/jpeg\r\n\r\n"
+    );
+    result = f_open(&File,(const TCHAR*)"0:/update/zhongli.jpg",FA_READ);	//打开文件
+
+	if((result != FR_OK)) 	
+	{
+		printf("open failed,result = %d\r\n",result);
+		return ;
+	}	
+
+    result = f_read(&File,\
+    &BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],File.obj.objsize,(UINT *)&bread);
+    if((result != FR_OK)) 	
+	{
+		printf("open failed,result = %d\r\n",result);
+		return ;
+	}
+    printf("file size = %lld\r\n",File.obj.objsize);    
+    BackGroundCtrl.Message_TxLen += File.obj.objsize;
+
+    f_close(&File);
+
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"\r\n------WebKitFormBoundaryJVDvW59t5ghf4dVJ\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Content-Disposition: form-data; name=\"file\"; filename=\"\"\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"Content-Type: application/octet-stream\r\n\r\n"
+    );
+    BackGroundCtrl.Message_TxLen += \
+        sprintf((char *)&BackGroundCtrl.Message_TXBuffer[BackGroundCtrl.Message_TxLen],\
+       "%s" ,"\r\n------WebKitFormBoundaryJVDvW59t5ghf4dVJ--\r\n"
+    );
+    MessageTx();
 }
  /**
 ****************************************************************************************

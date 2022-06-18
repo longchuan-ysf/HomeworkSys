@@ -103,6 +103,8 @@ int main(void)
 	
     //里面有用到内存管理的函数，一定要在内存初始化完在初始化串口
 	usart3_init(115200);  			//初始化串口3波特率为115200
+	MYDMA_Config(DMA2_Stream7);				//初始化DMA
+	
     exfuns_init();			        //为fatfs相关变量申请内存				 
   	f_mount(fs[0],"0:",1); 		    //挂载SD卡 
     f_mount(fs[1],"1:",1); 	        //挂载FLASH.	
@@ -242,8 +244,19 @@ void emwindemo_task(void *p_arg)
 }
 extern void test_http_post(void);
 extern void test_http_get(void);
-extern void test_ff(char* scan_dir,char* choose_file);
-//按键处理任务
+extern void test_post(void);
+extern void MessageTx(void);
+void test()
+{
+	uint32_t i;
+    for(i=0; i< 0xffff+0xffff+2048;i++)
+    {
+        BackGroundCtrl.Message_TXBuffer[i] = i;
+    }
+    BackGroundCtrl.Message_TxLen = i;
+    MessageTx();
+}
+
 void key_task(void *pdata)
 {
 	OS_ERR err;
@@ -259,7 +272,9 @@ void key_task(void *pdata)
 		{
 			case KEY0_PRES:
 			{
-				test_http_post();
+				test_post();
+				//test();
+				
 			}
 			break;
 			case KEY1_PRES:

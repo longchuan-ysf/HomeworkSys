@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "malloc.h"
 #include "delay.h"
+#include "dma.h"
 #include "BackGround.h"
 ////////////////////////////////////////////////////////////////////////////////// 	 
 //如果使用os,则包括下面的头文件即可.
@@ -277,14 +278,40 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 }
 void usart3_send(u8 *data,u32 length)
 {
-	uint32_t i;
+	//uint32_t i;
+    uint16_t sendlen;
+	OS_ERR err;
 	if(length>Usart3Data.USART3_MAX_SEND_LEN)
-		return;
-	for(i=0;i<length;i++)							//循环发送数据
+		return;	
+	while(length)
 	{
-		while((USART3->ISR&0X40)==0);			//循环发送,直到发送完毕   
-		USART3->TDR=data[i];  
-	} 
+        if(length>0xffff)
+        {
+            sendlen = 0xffff;
+        }
+        else
+        {
+            sendlen = length;
+        }
+        HAL_UART_Transmit_DMA(&UART3_Handler,(uint8_t *)data,sendlen);//开启DMA传输
+		
+		while(!(__HAL_DMA_GET_FLAG(&UART3TxDMA_Handler,DMA_FLAG_TCIF3_7)))//等待DMA2_Steam7传输完成
+		{
+			OSTimeDlyHMSM(0,0,0,1,OS_OPT_TIME_PERIODIC,&err);//延时1ms
+		}
+        __HAL_DMA_CLEAR_FLAG(&UART3TxDMA_Handler,DMA_FLAG_TCIF3_7);//清除DMA2_Steam7传输完成标志
+		HAL_UART_DMAStop(&UART3_Handler);      //传输完成以后关闭串口DMA
+
+        length -= sendlen;
+        data += sendlen;
+		   
+	}
+	printf("usart3 send date finish!\r\n");
+//	for(i=0;i<length;i++)							//循环发送数据
+//	{
+//		while((USART3->ISR&0X40)==0);			//循环发送,直到发送完毕   
+//		USART3->TDR=data[i];  
+//	} 
 }
 /*串口3,printf 函数,简短的AT指令可以用u3_printf,长数据就不能用，因为u3_printf的数据先是放在heap中再在
 print是调到AT_CMD，长数据就是直接放在USART3_TX_BUF中

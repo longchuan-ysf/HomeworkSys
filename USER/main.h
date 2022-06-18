@@ -46,6 +46,7 @@
 #include "usart.h" 
 #include "led.h"
 #include "key.h"
+#include "dma.h"
 #include "tftlcd.h"
 #include "sdram.h"
 #include "mpu.h"
