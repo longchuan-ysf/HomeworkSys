@@ -60,8 +60,9 @@ void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
 
 	while ((PWR->D3CR & (PWR_D3CR_VOSRDY)) != PWR_D3CR_VOSRDY) {}
   
-	RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+	RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_HSI48;
 	RCC_OscInitStruct.HSEState=RCC_HSE_ON;
+	RCC_OscInitStruct.HSI48State=RCC_HSI48_ON;
 	RCC_OscInitStruct.HSIState=RCC_HSI_OFF;
 	RCC_OscInitStruct.CSIState=RCC_CSI_OFF;
 	RCC_OscInitStruct.PLL.PLLState=RCC_PLL_ON;
@@ -74,6 +75,7 @@ void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
 
 	RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
 	RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
+	RCC_OscInitStruct.PLL.PLLFRACN = 0;
 	ret=HAL_RCC_OscConfig(&RCC_OscInitStruct);
 	if(ret!=HAL_OK) while(1);
   

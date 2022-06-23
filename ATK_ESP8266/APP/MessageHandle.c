@@ -638,9 +638,9 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 	FIL File;
 	FILINFO* fno;
 
-	#if SYSTEM_SUPPORT_OS
-		CPU_SR_ALLOC();
-	#endif
+//	#if SYSTEM_SUPPORT_OS
+//		CPU_SR_ALLOC();
+//	#endif
 
 	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
 

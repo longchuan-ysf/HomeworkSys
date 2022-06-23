@@ -14,6 +14,12 @@
 #include "ff.h"
 #include "ftl.h"	
 #include "includes.h"
+#define USE_USB 1
+#if USE_USB==1
+
+#include "usbh_diskio.h" 
+#endif
+
 //////////////////////////////////////////////////////////////////////////////////	 
 //本程序只供学习使用，未经作者许可，不得用于其它任何用途
 //ALIENTEK STM32开发板
@@ -30,6 +36,7 @@
 #define SD_CARD	 	0  			//SD卡,卷标为0
 #define EX_FLASH 	1			//外部spi flash,卷标为1
 #define EX_NAND  	2			//外部nand flash,卷标为2
+#define USB_DISK	3			//U盘,卷标为3
 
 //对于W25Q256
 //前25M字节给fatfs用,25M字节后,用于存放字库,字库占用6.01M.	剩余部分,给客户自己用	 
@@ -62,6 +69,11 @@ DSTATUS disk_initialize (
 		case EX_NAND:		//外部NAND
 			res=FTL_Init();	//NAND初始化
  			break;
+		 case USB_DISK:		//U盘 
+			#if USE_USB==1			 
+            res=USBH_initialize();//U盘初始化
+			#endif
+			break;
 		default:
 			res=1; 
 	}		 
@@ -88,7 +100,7 @@ DRESULT disk_read (
 			res=SD_ReadDisk(buff,sector,count);	 
 			while(res)//读出错
 			{
-				SD_Init();	//重新初始化SD卡
+				if(res!=2)SD_Init();	//重新初始化SD卡
 				res=SD_ReadDisk(buff,sector,count);	
 				//printf("sd rd error:%d\r\n",res);
 			}
@@ -104,6 +116,12 @@ DRESULT disk_read (
 			break;
 		case EX_NAND:		//外部NAND
 			res=FTL_ReadSectors(buff,sector,512,count);	//读取数据			
+			break;
+		case USB_DISK:	//U盘  
+			#if USE_USB==1			 
+            res=USBH_read(buff,sector,count); 
+			#endif			
+			 	
 			break;
 		default:
 			res=1; 
@@ -135,13 +153,8 @@ DRESULT disk_write (
 			cnt=0;
 			while(res)//写出错
 			{
-				SD_Init();	//重新初始化SD卡
-				cnt++;
-				delay_ms(1000);
-				res=SD_WriteDisk((u8*)buff,sector,count);	
-				printf("sd wr error:%d\r\n",res);
-				if(cnt>=10)
-					break;
+				if(res!=2)SD_Init();	//重新初始化SD卡	
+				res=SD_WriteDisk((u8*)buff,sector,count);				
 			}
 			break;
 		case EX_FLASH://外部flash
@@ -156,6 +169,12 @@ DRESULT disk_write (
 		case EX_NAND:		//外部NAND
 			res=FTL_WriteSectors((u8*)buff,sector,512,count);//写入数据
 			break;
+		case USB_DISK:	    //U盘
+			#if USE_USB==1			 
+            res=USBH_write(buff,sector,count); 
+			#endif
+            
+            break;
 		default:
 			res=1; 
 	}
@@ -243,7 +262,13 @@ DRESULT res;
 		        res = RES_PARERR;
 		        break;
 	    }
-	}else res=RES_ERROR;//其他的不支持
+	}else if(pdrv==USB_DISK)	//U盘
+    {
+		#if USE_USB==1			 
+		res=USBH_ioctl(cmd,buff);
+		#endif
+       
+    }else res=RES_ERROR;//其他的不支持
     return res;
 } 
 

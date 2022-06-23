@@ -96,6 +96,7 @@ u8 f_typetell(u8 *fname)
 			break;
 		}
   	}
+	if(attr==0)return 0XFF;
 	strcpy((char *)tbuf,(const char*)attr);//copy
  	for(i=0;i<4;i++)tbuf[i]=char_upper(tbuf[i]);//全部变为大写 
 	for(i=0;i<FILE_MAX_TYPE_NUM;i++)	//大类对比

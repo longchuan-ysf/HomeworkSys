@@ -75,12 +75,34 @@ CPU_STK LED0_TASK_STK[LED0_STK_SIZE];
 //led0任务
 void led0_task(void *p_arg);
 
+//USB任务
+//设置任务优先级
+#define USB_TASK_PRIO 				8
+//任务堆栈大小
+#define USB_STK_SIZE				(512)
+//任务控制块
+OS_TCB USB_TaskTCB;
+//任务堆栈
+CPU_STK USB_TASK_STK[USB_STK_SIZE];
+//USB任务
+void USB_task(void *p_arg);
 
-
+//USB读写任务
+//设置任务优先级
+#define USB_WR_TASK_PRIO 				9
+//任务堆栈大小
+#define USB_WR_STK_SIZE				(512)
+//任务控制块
+OS_TCB USB_WR_TaskTCB;
+//任务堆栈
+CPU_STK USB_WR_TASK_STK[USB_WR_STK_SIZE];
+//USB读写任务
+void USB_WR_task(void *p_arg);
 
 int main(void)
 {
     OS_ERR err;
+	u8 res=0;
 	CPU_SR_ALLOC();
     
     Write_Through();                //Cahce强制透写
@@ -90,8 +112,9 @@ int main(void)
 	Stm32_Clock_Init(160,5,2,4);    //设置时钟,400Mhz 
 	delay_init(400);			    //延时初始化
 	uart_init(115200);			    //串口初始化
-	
+	usmart_dev.init(200); 		    //初始化USMART	
 	LED_Init();					    //初始化LED
+	PCF8574_Init();
 	KEY_Init();					    //初始化按键
 	SDRAM_Init();                   //初始化SDRAM
 	TFTLCD_Init();				    //初始化LCD
@@ -109,6 +132,7 @@ int main(void)
   	f_mount(fs[0],"0:",1); 		    //挂载SD卡 
     f_mount(fs[1],"1:",1); 	        //挂载FLASH.	
     f_mount(fs[2],"2:",1); 		    //挂载NAND FLASH.
+	
     while(font_init())		        //初始化字库
 	{
 		LCD_ShowString(30,70,200,16,16,"Font Error!");
@@ -124,7 +148,6 @@ int main(void)
 		LCD_Clear(WHITE);	//清屏
 		break;
 	}
-    
     OSInit(&err);		            //初始化UCOSIII
 	OS_CRITICAL_ENTER();            //进入临界区
 	//创建开始任务
@@ -228,6 +251,20 @@ void start_task(void *p_arg)
                  (OS_TICK	  )0,  					
                  (void*       )0,					
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+                 (OS_ERR*     )&err); 
+	//USB任务
+	OSTaskCreate((OS_TCB*     )&USB_TaskTCB,		
+				 (CPU_CHAR*   )"USB task", 		
+                 (OS_TASK_PTR )USB_task, 			
+                 (void*       )0,					
+                 (OS_PRIO	  )USB_TASK_PRIO,     
+                 (CPU_STK*    )&USB_TASK_STK[0],	
+                 (CPU_STK_SIZE)USB_STK_SIZE/10,	
+                 (CPU_STK_SIZE)USB_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,  					
+                 (void*       )0,					
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
                  (OS_ERR*     )&err);                  
 	OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err);		//挂起开始任务			 
 	OS_CRITICAL_EXIT();	//退出临界区
@@ -261,25 +298,25 @@ void key_task(void *pdata)
 {
 	OS_ERR err;
 	u32 cnt;
-	atk_8266_test();
-	BackGroundInit();
+//	atk_8266_test();
+//	BackGroundInit();
 	u8 key;
 	while(1)
 	{
-		MessageRxHandle();
+//		MessageRxHandle();
 		key = KEY_Scan(0);
 		switch(key)
 		{
 			case KEY0_PRES:
 			{
-				test_post();
-				//test();
+				mf_scan_files("0:");				
 				
 			}
 			break;
 			case KEY1_PRES:
 			{
-				test_http_get();
+//				fat_test_read(txtFileName);
+				//test_http_get();
 			}
 			break;
 		}
@@ -325,6 +362,9 @@ void Memory_Usage()
 	
 	OSTaskStkChk(&KeyTaskTCB,&myfree,&myused,&err);
 	printf("KeyTaskTCB has free:%d, Usage:%%%d\r\n",myfree,(myused*100)/(myfree+myused));	//计算任务1的空闲字节数和堆栈使用率
+	
+	OSTaskStkChk(&USB_TaskTCB,&myfree,&myused,&err);
+	printf("USB_TaskTCB has free:%d, Usage:%%%d\r\n",myfree,(myused*100)/(myfree+myused));	//计算任务1的空闲字节数和堆栈使用率
 
 }
 
@@ -332,8 +372,7 @@ void Memory_Usage()
 void led0_task(void *p_arg)
 {
 	OS_ERR err;
-	u8 time=0;
-	
+	u8 time=0;	
 	while(1)
 	{
 		
@@ -342,8 +381,20 @@ void led0_task(void *p_arg)
 		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//延时500ms
 		if(time == 10)//5秒输出一次内存使用率
 		{
-			//Memory_Usage();
+			Memory_Usage();
 			time = 0;
 		}
 	}
 }
+//USBH_Process的主要处理任务
+void USB_task(void *pdata)
+{
+	printf("%s\r\n",__func__);
+    usb_app_main();
+}
+//该任务的主要功能就是处理其他任务丢给USB的读写指令
+void USB_WR_task(void *p_arg)
+{
+
+}
+
