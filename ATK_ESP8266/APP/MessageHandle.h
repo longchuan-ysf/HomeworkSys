@@ -38,7 +38,7 @@ typedef struct
 	uint8_t *ContentDisposition;//默认文件名
 	uint32_t DataLength;//数据长度
 	
-	uint8_t Method;//收到响应的类型 0:GET;1:POST
+	uint8_t Method;//收到数据的类型 收到的POST请求还是 GET的回复 或者自己POST的回复
 }Http_Respon;
 
 //出于效率考虑使用宏定义指定目录下可扫描的最大文件数量

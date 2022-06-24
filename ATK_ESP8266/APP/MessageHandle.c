@@ -8,13 +8,12 @@
 说明:   协议报文处理——网络协议应用层
 ***************************************************************************************************/
 #include "BackGround.h"
-
 #include "MessageHandle.h"
 #include "string.h"
 #include "usart.h"
 #include "malloc.h"
 #include "common.h"
-
+#include "usbh_app.h"
 #define TEST_POST 0
 
 #if TEST_POST==1
@@ -320,50 +319,32 @@ void Generate_Random_Name(void)
 
 uint8_t Http_Save_Date(uint8_t *data,uint32_t len)
 {
-	u16 PathLen;
-	char *filepath;
-	char result;
-	int bread;
-	FIL File;
-	#if SYSTEM_SUPPORT_OS
-		CPU_SR_ALLOC();
-	#endif
-	PathLen = strlen((char *)HttpRespon.ContentDisposition)+strlen("0:/download/")+1;//1是结束符\0
-	filepath = mymalloc(SRAMIN,PathLen);	//申请内存
-	mymemset(filepath,0,PathLen);
-	sprintf(filepath,"%s%s","0:/download/",HttpRespon.ContentDisposition);
-	printf("open %s\r\n",filepath);
-	result = f_open(&File,(const TCHAR*)filepath,FA_WRITE|FA_CREATE_ALWAYS);	//打开文件
+	u16 PathLen,timeout;
+	uint8_t *filepath,*DataBuff;
+    pUSBH_WR_MSG pMsgWR;
 
-	if((result != FR_OK)) 	
+	PathLen = strlen((char *)HttpRespon.ContentDisposition)+strlen("3:/download/")+1;//1是结束符\0
+	filepath = USBH_Malloc_Path(PathLen);	//申请内存
+	sprintf((char *)filepath,"%s%s","3:/download/",HttpRespon.ContentDisposition);
+    DataBuff = USBH_Malloc_WriteBuf(len);
+    mymemcpy(DataBuff, data, len);
+    pMsgWR = USBH_ApplyFor_WR(filepath,DataBuff,len,FA_WRITE|FA_CREATE_ALWAYS);
+    timeout = 0;
+	while(1)
 	{
-		printf("open %s  failed,result = %d\r\n",filepath,result);
-		return 1;
-	}	
-
-	
-	#if SYSTEM_SUPPORT_OS
-		OS_CRITICAL_ENTER();		//临界区
-	#endif
-	//printf("start saving data\r\n");	
-	result = f_write(&File,data,len,(UINT *)&bread); 
-	if((result != FR_OK)) 	
-	{
-		printf("write %s  failed,result = %d\r\n",filepath,result);
-		#if SYSTEM_SUPPORT_OS
-		OS_CRITICAL_EXIT();	//退出临界区
-		#endif
-		return 1;
-	}	
-
-	
-	#if SYSTEM_SUPPORT_OS
-		OS_CRITICAL_EXIT();	//退出临界区
-	#endif
-	
-	f_close(&File);			//关闭JPEGFile文件
-	printf("save data ok !\r\n");
-	return 0;
+        timeout++;
+		if(pMsgWR->result==FR_OK)
+		{
+			USBH_WR_MsgFree(pMsgWR);
+			printf("write ok\r\n");
+			return 0;
+		}
+        if(timeout>10*1000)//10s的超时判断
+        {
+		    return 1;
+        }
+		delay_ms(10);//延时10ms
+	}
 }
 
 //释放内存，在读取完信息后进行释放
@@ -629,18 +610,12 @@ void HTTP_Post_AddFileInfo(uint8_t *FileName,uint8_t *FileDate,uint32_t FileLen)
 
 void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 {
-	u16 PathLen;
-	char *filepath;
-	char *pdata;
-	char result;
-	int bread;
-	OS_ERR err;
-	FIL File;
-	FILINFO* fno;
 
-//	#if SYSTEM_SUPPORT_OS
-//		CPU_SR_ALLOC();
-//	#endif
+	OS_ERR err;    
+    u16 PathLen,timeout;
+	uint8_t *filepath;
+    pUSBH_WR_MSG pMsgRD;
+
 
 	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
 
@@ -648,52 +623,32 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 	#if TEST_POST==0
 	MessageTxInit(POST,url);
 	#endif
-    
-	PathLen = strlen((char *)FileName)+strlen("0:/update/")+1;//1是结束符\0
-	filepath = mymalloc(SRAMIN,PathLen);	//申请内存
-	
-	mymemset(filepath,0,PathLen);
-	sprintf(filepath,"0:/update/%s",FileName);
-	
-	
-	fno = (FILINFO*)mymalloc(SRAMIN,sizeof(FILINFO));
-	result = f_stat (filepath,fno);	
-	if((result != FR_OK)) 	
+	PathLen = strlen((char *)FileName)+strlen("3:/update/")+1;//1是结束符\0
+	filepath = USBH_Malloc_Path(PathLen);	//申请内存
+	sprintf((char *)filepath,"3:/update/%s",FileName);
+    pMsgRD = USBH_ApplyFor_WR(filepath,0,RD_ALL_DATA,FA_READ);
+    timeout = 0;
+	while(1)
 	{
-		printf("get %s state  failed,result = %d\r\n",filepath,result);
-		goto post_return ;
+        timeout++;
+		if(pMsgRD->result==FR_OK)
+		{
+			printf("read ok\r\n");
+			break;
+		}
+        if(timeout>10*1000)//10s的超时判断
+        {
+            printf("timeout!!!!!!!\r\n");
+		   goto post_return ; 
+        }
+		delay_ms(10);//延时10ms
 	}	
-	
-	printf("f_stat ok,filesize=%lld open %s\r\n",fno->fsize, filepath);
-	result = f_open(&File,(const TCHAR*)filepath,FA_READ);	//打开文件
-
-	if((result != FR_OK)) 	
-	{
-		printf("open %s  failed,result = %d\r\n",filepath,result);
-		goto post_return ;
-	}	
-
-	
-
-	pdata = mymalloc(SRAMEX,fno->fsize);
-	printf("open %s OK start read\r\n",filepath);
-	result = f_read(&File,pdata,fno->fsize,(UINT *)&bread); //读取数据
-	if((result != FR_OK)) 	
-	{
-		printf("write %s  failed,result = %d\r\n",filepath,result);
-
-		goto post_return ; 
-	}
-	HTTP_Post_AddFileInfo(FileName,(uint8_t *)pdata,fno->fsize);	
+	HTTP_Post_AddFileInfo(FileName,pMsgRD->data,pMsgRD->bread);	
+    USBH_WR_MsgFree(pMsgRD);
 	MessageTx();
 post_return:
-	f_close(&File);			//关闭文件
-	
 	myfree(SRAMIN,filepath);
-	myfree(SRAMIN,fno);
-	myfree(SRAMEX,pdata);
-	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
-		
+	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量	
 	return ;
 }
 
@@ -843,8 +798,6 @@ void HTTP_Handle(uint8_t *data,uint16_t len)
 	uint8_t* templine;
 	uint8_t len_temp,i;//为了方便调试而取的中间变量
 	mymemset(&HttpRespon, 0, sizeof(HttpRespon));
-
-	
 	
 	//获取状态栏的数据以解析 不能直接查OK，万一消息头中存在OK，而是要在状态栏里找OK
 	mymemset(temp, 0, sizeof(temp));

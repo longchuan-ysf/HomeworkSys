@@ -80,6 +80,7 @@
 #include "pcf8574.h"
 #include "fattester.h"	
 #include "usbh_app.h"
+#include "camera_app.h"
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

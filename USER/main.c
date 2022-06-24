@@ -237,48 +237,48 @@ void start_task(void *p_arg)
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR|OS_OPT_TASK_SAVE_FP,
                  (OS_ERR*     )&err);	                 
 ; 
-	//按键任务
-	OSTaskCreate((OS_TCB*     )&KeyTaskTCB,		
-				 (CPU_CHAR*   )"Key task", 		
-                 (OS_TASK_PTR )key_task, 			
-                 (void*       )0,					
-                 (OS_PRIO	  )KEY_TASK_PRIO,     
-                 (CPU_STK*    )&KEY_TASK_STK[0],	
-                 (CPU_STK_SIZE)KEY_STK_SIZE/10,	
-                 (CPU_STK_SIZE)KEY_STK_SIZE,		
-                 (OS_MSG_QTY  )0,					
-                 (OS_TICK	  )0,  					
-                 (void*       )0,					
-                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-                 (OS_ERR*     )&err); 
-	//USB任务
-	OSTaskCreate((OS_TCB*     )&USB_TaskTCB,		
-				 (CPU_CHAR*   )"USB task", 		
-                 (OS_TASK_PTR )USB_task, 			
-                 (void*       )0,					
-                 (OS_PRIO	  )USB_TASK_PRIO,     
-                 (CPU_STK*    )&USB_TASK_STK[0],	
-                 (CPU_STK_SIZE)USB_STK_SIZE/10,	
-                 (CPU_STK_SIZE)USB_STK_SIZE,		
-                 (OS_MSG_QTY  )0,					
-                 (OS_TICK	  )0,  					
-                 (void*       )0,					
-                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-                 (OS_ERR*     )&err);   
-	//USB读写任务
-	OSTaskCreate((OS_TCB*     )&USB_WR_TaskTCB,		
-				 (CPU_CHAR*   )"USB_WR task", 		
-                 (OS_TASK_PTR )USB_WR_task, 			
-                 (void*       )0,					
-                 (OS_PRIO	  )USB_WR_TASK_PRIO,     
-                 (CPU_STK*    )&USB_WR_TASK_STK[0],	
-                 (CPU_STK_SIZE)USB_WR_STK_SIZE/10,	
-                 (CPU_STK_SIZE)USB_WR_STK_SIZE,		
-                 (OS_MSG_QTY  )0,					
-                 (OS_TICK	  )0,  					
-                 (void*       )0,					
-                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-                 (OS_ERR*     )&err); 				 
+//	//按键任务
+//	OSTaskCreate((OS_TCB*     )&KeyTaskTCB,		
+//				 (CPU_CHAR*   )"Key task", 		
+//                 (OS_TASK_PTR )key_task, 			
+//                 (void*       )0,					
+//                 (OS_PRIO	  )KEY_TASK_PRIO,     
+//                 (CPU_STK*    )&KEY_TASK_STK[0],	
+//                 (CPU_STK_SIZE)KEY_STK_SIZE/10,	
+//                 (CPU_STK_SIZE)KEY_STK_SIZE,		
+//                 (OS_MSG_QTY  )0,					
+//                 (OS_TICK	  )0,  					
+//                 (void*       )0,					
+//                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+//                 (OS_ERR*     )&err); 
+//	//USB任务
+//	OSTaskCreate((OS_TCB*     )&USB_TaskTCB,		
+//				 (CPU_CHAR*   )"USB task", 		
+//                 (OS_TASK_PTR )USB_task, 			
+//                 (void*       )0,					
+//                 (OS_PRIO	  )USB_TASK_PRIO,     
+//                 (CPU_STK*    )&USB_TASK_STK[0],	
+//                 (CPU_STK_SIZE)USB_STK_SIZE/10,	
+//                 (CPU_STK_SIZE)USB_STK_SIZE,		
+//                 (OS_MSG_QTY  )0,					
+//                 (OS_TICK	  )0,  					
+//                 (void*       )0,					
+//                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+//                 (OS_ERR*     )&err);   
+//	//USB读写任务
+//	OSTaskCreate((OS_TCB*     )&USB_WR_TaskTCB,		
+//				 (CPU_CHAR*   )"USB_WR task", 		
+//                 (OS_TASK_PTR )USB_WR_task, 			
+//                 (void*       )0,					
+//                 (OS_PRIO	  )USB_WR_TASK_PRIO,     
+//                 (CPU_STK*    )&USB_WR_TASK_STK[0],	
+//                 (CPU_STK_SIZE)USB_WR_STK_SIZE/10,	
+//                 (CPU_STK_SIZE)USB_WR_STK_SIZE,		
+//                 (OS_MSG_QTY  )0,					
+//                 (OS_TICK	  )0,  					
+//                 (void*       )0,					
+//                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+//                 (OS_ERR*     )&err); 				 
 	OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err);		//挂起开始任务			 
 	OS_CRITICAL_EXIT();	//退出临界区
 }
@@ -286,99 +286,36 @@ void start_task(void *p_arg)
 //EMWINDEMO任务
 void emwindemo_task(void *p_arg)
 {
-	CreateFramewin();
+	//CreateFramewin();
 	while(1)
 	{
+	   camera_app_main();
        GUI_Delay(100);
 	}
 }
 extern void test_http_post(void);
 extern void test_http_get(void);
 extern void test_post(void);
-extern void MessageTx(void);
-void test()
-{
-	uint32_t i;
-    for(i=0; i< 0xffff+0xffff+2048;i++)
-    {
-        BackGroundCtrl.Message_TXBuffer[i] = i;
-    }
-    BackGroundCtrl.Message_TxLen = i;
-    MessageTx();
-}
-
 void key_task(void *pdata)
 {
 	OS_ERR err;
-	u8* path,*data;
-	pUSBH_WR_MSG pMsgRD;
-	pUSBH_WR_MSG pMsgWR;
-	u32 cnt;
-//	atk_8266_test();
-//	BackGroundInit();
+	atk_8266_test();
+	BackGroundInit();
 	u8 key;
 	while(1)
 	{
-//		MessageRxHandle();
+		MessageRxHandle();
 		key = KEY_Scan(0);
 		switch(key)
 		{
 			case KEY0_PRES:
 			{
-				//mf_scan_files("3:");	
-				path = USBH_Malloc_Path(128);	
-				sprintf((char *)path,"3:usbtest.txt");
-				data = USBH_Malloc_WriteBuf(200);
-				cnt = sprintf((char *)data,"\r\n------WebKitFormBoundaryO2WAD3vh5VDNQCJf\r\n"\
-										"Content-Disposition: form-data; name=\"file\"; filename=""\r\n"\
-										"Content-Type: application/octet-stream\r\n\r\n"\
-										"\r\n------WebKitFormBoundaryO2WAD3vh5VDNQCJf--\r\n");
-				pMsgWR = USBH_ApplyFor_WR(path,data,cnt,FA_WRITE|FA_CREATE_ALWAYS);
-				while(1)
-				{
-					if(pMsgWR->result==FR_OK)
-					{
-						USBH_WR_MsgFree(pMsgWR);
-						printf("write ok\r\n");
-						break;
-					}
-					OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
-				}
-				
+				test_http_post();				
 			}
 			break;
 			case KEY1_PRES:
-			{
-				path = USBH_Malloc_Path(128);	
-				sprintf((char *)path,"3:zhongli.jpg");
-				pMsgRD = USBH_ApplyFor_WR(path,0,RD_ALL_DATA,FA_READ);
-				while(1)
-				{
-					if(pMsgRD->result==FR_OK)
-					{
-						printf("read ok,data:\r\n%s",pMsgRD->data);
-						break;
-					}
-					OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
-				}
-				
-				
-				path = USBH_Malloc_Path(128);	
-				sprintf((char *)path,"3:zhongli_backup.jpg");
-				data = USBH_Malloc_WriteBuf(pMsgRD->bread);
-				pMsgWR = USBH_ApplyFor_WR(path,pMsgRD->data,pMsgRD->bread,FA_WRITE|FA_CREATE_ALWAYS);
-				while(1)
-				{
-					if(pMsgWR->result==FR_OK)
-					{
-						USBH_WR_MsgFree(pMsgWR);
-						printf("write ok\r\n");
-						break;
-					}
-					OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
-				}
-				USBH_WR_MsgFree(pMsgRD);
-				//test_http_get();
+			{		
+				test_http_get();
 			}
 			break;
 		}
