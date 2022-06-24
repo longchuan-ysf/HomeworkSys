@@ -102,7 +102,6 @@ void USB_WR_task(void *p_arg);
 int main(void)
 {
     OS_ERR err;
-	u8 res=0;
 	CPU_SR_ALLOC();
     
     Write_Through();                //Cahce强制透写
@@ -265,7 +264,21 @@ void start_task(void *p_arg)
                  (OS_TICK	  )0,  					
                  (void*       )0,					
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-                 (OS_ERR*     )&err);                  
+                 (OS_ERR*     )&err);   
+	//USB读写任务
+	OSTaskCreate((OS_TCB*     )&USB_WR_TaskTCB,		
+				 (CPU_CHAR*   )"USB_WR task", 		
+                 (OS_TASK_PTR )USB_WR_task, 			
+                 (void*       )0,					
+                 (OS_PRIO	  )USB_WR_TASK_PRIO,     
+                 (CPU_STK*    )&USB_WR_TASK_STK[0],	
+                 (CPU_STK_SIZE)USB_WR_STK_SIZE/10,	
+                 (CPU_STK_SIZE)USB_WR_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,  					
+                 (void*       )0,					
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+                 (OS_ERR*     )&err); 				 
 	OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err);		//挂起开始任务			 
 	OS_CRITICAL_EXIT();	//退出临界区
 }
@@ -297,6 +310,9 @@ void test()
 void key_task(void *pdata)
 {
 	OS_ERR err;
+	u8* path,*data;
+	pUSBH_WR_MSG pMsgRD;
+	pUSBH_WR_MSG pMsgWR;
 	u32 cnt;
 //	atk_8266_test();
 //	BackGroundInit();
@@ -309,13 +325,59 @@ void key_task(void *pdata)
 		{
 			case KEY0_PRES:
 			{
-				mf_scan_files("0:");				
+				//mf_scan_files("3:");	
+				path = USBH_Malloc_Path(128);	
+				sprintf((char *)path,"3:usbtest.txt");
+				data = USBH_Malloc_WriteBuf(200);
+				cnt = sprintf((char *)data,"\r\n------WebKitFormBoundaryO2WAD3vh5VDNQCJf\r\n"\
+										"Content-Disposition: form-data; name=\"file\"; filename=""\r\n"\
+										"Content-Type: application/octet-stream\r\n\r\n"\
+										"\r\n------WebKitFormBoundaryO2WAD3vh5VDNQCJf--\r\n");
+				pMsgWR = USBH_ApplyFor_WR(path,data,cnt,FA_WRITE|FA_CREATE_ALWAYS);
+				while(1)
+				{
+					if(pMsgWR->result==FR_OK)
+					{
+						USBH_WR_MsgFree(pMsgWR);
+						printf("write ok\r\n");
+						break;
+					}
+					OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
+				}
 				
 			}
 			break;
 			case KEY1_PRES:
 			{
-//				fat_test_read(txtFileName);
+				path = USBH_Malloc_Path(128);	
+				sprintf((char *)path,"3:zhongli.jpg");
+				pMsgRD = USBH_ApplyFor_WR(path,0,RD_ALL_DATA,FA_READ);
+				while(1)
+				{
+					if(pMsgRD->result==FR_OK)
+					{
+						printf("read ok,data:\r\n%s",pMsgRD->data);
+						break;
+					}
+					OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
+				}
+				
+				
+				path = USBH_Malloc_Path(128);	
+				sprintf((char *)path,"3:zhongli_backup.jpg");
+				data = USBH_Malloc_WriteBuf(pMsgRD->bread);
+				pMsgWR = USBH_ApplyFor_WR(path,pMsgRD->data,pMsgRD->bread,FA_WRITE|FA_CREATE_ALWAYS);
+				while(1)
+				{
+					if(pMsgWR->result==FR_OK)
+					{
+						USBH_WR_MsgFree(pMsgWR);
+						printf("write ok\r\n");
+						break;
+					}
+					OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
+				}
+				USBH_WR_MsgFree(pMsgRD);
 				//test_http_get();
 			}
 			break;
@@ -389,12 +451,11 @@ void led0_task(void *p_arg)
 //USBH_Process的主要处理任务
 void USB_task(void *pdata)
 {
-	printf("%s\r\n",__func__);
     usb_app_main();
 }
 //该任务的主要功能就是处理其他任务丢给USB的读写指令
 void USB_WR_task(void *p_arg)
 {
-
+	usb_app_wr();
 }
 

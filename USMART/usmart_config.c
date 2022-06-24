@@ -11,7 +11,6 @@
 #include "fattester.h"
 //函数名列表初始化(用户自己添加)
 //用户直接在这里输入要执行的函数名及其查找串
-extern void fat_test_read(u8 *filePath);
 struct _m_usmart_nametab usmart_nametab[]=
 {
 #if USMART_USE_WRFUNS==1 	//如果使能了读写操作
@@ -44,8 +43,6 @@ struct _m_usmart_nametab usmart_nametab[]=
 	(void*)mf_puts,"u8 mf_puts(u8*c)", 
         
 
-		
-	(void *)fat_test_read,"void fat_test_read(u8 *filePath)"		
 };						  
 ///////////////////////////////////END///////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////
