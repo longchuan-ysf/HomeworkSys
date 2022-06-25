@@ -1,29 +1,18 @@
 #include "sys.h"
 #include "delay.h"
 #include "usart.h" 
-#include "led.h"
 #include "key.h"
 #include "ltdc.h"
 #include "tftlcd.h"
 #include "sdram.h"
-#include "usmart.h"
 #include "pcf8574.h"
 #include "ov5640.h"
-#include "mpu.h"
 #include "dcmi.h"
-#include "malloc.h"
-#include "w25qxx.h"
-#include "sdmmc_sdcard.h"
-#include "nand.h"    
-#include "ftl.h"  
-#include "ff.h"
-#include "exfuns.h"
-#include "fontupd.h"
-#include "text.h"
 #include "camera_app.h"
-#include "string.h"		
-#include "math.h"
+#include "malloc.h"		
+#include "ff.h"
 #include "jpegcodec.h"
+#include "usbh_app.h"
 /************************************************
  ALIENTEK 阿波罗STM32H7开发板 实验46
  照相机实验-HAL库函数版
@@ -34,12 +23,12 @@
  作者：正点原子 @ALIENTEK
 ************************************************/
 
-vu8 bmp_request=0;						//bmp拍照请求:0,无bmp拍照请求;1,有bmp拍照请求,需要在帧中断里面,关闭DCMI接口.
+
 u8 ovx_mode=0;							//bit0:0,RGB565模式;1,JPEG模式 
 u16 curline=0;							//摄像头输出数据,当前行编号
 u16 yoffset=0;							//y方向的偏移量
 
-#define jpeg_buf_size   6*1024*1024		//定义JPEG数据缓存jpeg_buf的大小(6M字节)
+#define jpeg_buf_size   4*1024*1024		//定义JPEG数据缓存jpeg_buf的大小(4M字节)
 #define jpeg_line_size	2*1024			//定义DMA接收数据时,一行数据的最大值
 
 u32 *dcmi_line_buf[2];					//RGB屏时,摄像头采用一行一行读取,定义行缓存  
@@ -132,40 +121,111 @@ void rgblcd_dcmi_rx_callback(void)
 
 
 //文件名自增（避免覆盖）
-//mode:0,创建.bmp文件;1,创建.jpg文件.
-//bmp组合成:形如"0:PHOTO/PIC13141.bmp"的文件名
 //jpg组合成:形如"0:PHOTO/PIC13141.jpg"的文件名
 void camera_new_pathname(u8 *pname)
 {	 
-	u8 res;					 
+
 	u16 index=0;
-	while(index<0XFFFF)
-	{
-		sprintf((char*)pname,"%s/%s/PIC%05d.jpg",SAVE_DISK,SAVE_FLODER,index);
-		res=f_open(ftemp,(const TCHAR*)pname,FA_READ);//尝试打开这个文件
-		if(res==FR_NO_FILE)
-			break;		//该文件名不存在=正是我们需要的.
-		index++;
-	}
+	printf("%s   %d\r\n",__func__,__LINE__);
+	index=rand();
+	sprintf((char*)pname,"%s/%s/PIC%05d.jpg",SAVE_DISK,SAVE_FLODER,index);
 }  
-void OV5640_Save_photo(void)
+uint8_t OV5640_Save_photo(void)
 {
-	uint8_t * pname;
-	pname=mymalloc(SRAMIN,30);//为带路径的文件名分配30个字节的内存	
-	camera_new_pathname(pname);   //得到文件名	
+	uint8_t * pbuf,*dir;;
+	uint8_t res,headok,fac;
+	uint32_t i,jpgstart,jpglen;
+	u16 timeout;
+    pUSBH_WR_MSG pMsgWR;
+	
+	dir = mymalloc(SRAMIN,16);
+	if(!dir)
+	{
+		printf("%s malloc dir err!\r\n",__func__);
+		return 1;
+	}
+	mymemset(dir,0,16);
+	sprintf((char *)dir,"%s/%s",SAVE_DISK,SAVE_FLODER);
+	
+	res=f_mkdir((TCHAR *)dir);		//创建PHOTO文件夹
+	if(res!=FR_EXIST&&res!=FR_OK) 	//发生了错误
+	{	
+		printf("save err in open dir\r\n");	
+		return 2;		
+	}	
+	pMsgWR = USBH_Malloc_CtrlStruct();
+	
+	USBH_Malloc_Path(pMsgWR,30);
+	
+	camera_new_pathname(pMsgWR->path);
+
+	printf("jpeg data size:%d\r\n",jpeg_data_len*4);//串口打印JPEG文件大小
+	pbuf=(u8*)jpeg_data_buf;
+	jpglen=0;	//设置jpg文件大小为0
+	headok=0;	//清除jpg头标记
+	for(i=0;i<jpeg_data_len*4;i++)//查找0XFF,0XD8和0XFF,0XD9,获取jpg文件大小
+	{
+		if((pbuf[i]==0XFF)&&(pbuf[i+1]==0XD8))//找到FF D8
+		{
+			jpgstart=i;
+			headok=1;	//标记找到jpg头(FF D8)
+		}
+		if((pbuf[i]==0XFF)&&(pbuf[i+1]==0XD9)&&headok)//找到头以后,再找FF D9
+		{
+			jpglen=i-jpgstart+2;
+			break;
+		}
+	}
+
+	if(jpglen)			//正常的jpeg数据 
+	{
+		pbuf+=jpgstart;	//偏移到0XFF,0XD8处
+		
+		USBH_Malloc_WriteBuf(pMsgWR,WR_BUFF_EX,pbuf);
+	
+		USBH_ApplyFor_WR(pMsgWR,jpglen,FA_WRITE|FA_CREATE_ALWAYS);
+		
+		timeout = 0;
+		while(1)
+		{
+			timeout++;
+			if(pMsgWR->result==FR_OK)
+			{
+				USBH_WR_MsgFree(pMsgWR);
+				printf("write ok\r\n");
+				res= 0;
+				break;
+			}
+			if(timeout>10*1000)//10s的超时判断
+			{
+				res= 3;
+				break;
+			}
+			delay_ms(10);//延时10ms
+		}
+		if(pMsgWR->bread!=jpglen)
+			res=4; 
+		
+	}
+	else
+	{
+		res=5; 
+	}
+	
+	jpeg_data_len=0;
+	
+	
+	return res;
 }
 //OV5640拍照jpg图片
 //返回值:0,成功
 //    其他,错误代码
 u8 ov5640_jpg_photo(void)
 {
-	FIL* f_jpg; 
-	u8 res=0,headok=0;
-	u32 bwr;
-	u32 i,jpgstart,jpglen;
-	u8* pbuf;
-	f_jpg=(FIL *)mymalloc(SRAMIN,sizeof(FIL));	//开辟FIL字节的内存区域 
-	if(f_jpg==NULL)return 0XFF;				//内存申请失败.
+	
+	u8 res=0,fac;
+	u16 outputheight=0;
+	printf("%s\r\n",__func__);
 	ovx_mode=1;
 	jpeg_data_ok=0;						
 	OV5640_JPEG_Mode();						//JPEG模式  
@@ -178,36 +238,11 @@ u8 ov5640_jpg_photo(void)
 	while(jpeg_data_ok!=1);	//等待第二帧图片采集完,第二帧,才保存到SD卡去. 
 	DCMI_Stop(); 			//停止DMA搬运
 	ovx_mode=0; 
-//	res=f_open(f_jpg,(const TCHAR*)pname,FA_WRITE|FA_CREATE_NEW);//模式0,或者尝试打开失败,则创建新文件	 
-//	if(res==0)
-//	{
-//		printf("jpeg data size:%d\r\n",jpeg_data_len*4);//串口打印JPEG文件大小
-//		pbuf=(u8*)jpeg_data_buf;
-//		jpglen=0;	//设置jpg文件大小为0
-//		headok=0;	//清除jpg头标记
-//		for(i=0;i<jpeg_data_len*4;i++)//查找0XFF,0XD8和0XFF,0XD9,获取jpg文件大小
-//		{
-//			if((pbuf[i]==0XFF)&&(pbuf[i+1]==0XD8))//找到FF D8
-//			{
-//				jpgstart=i;
-//				headok=1;	//标记找到jpg头(FF D8)
-//			}
-//			if((pbuf[i]==0XFF)&&(pbuf[i+1]==0XD9)&&headok)//找到头以后,再找FF D9
-//			{
-//				jpglen=i-jpgstart+2;
-//				break;
-//			}
-//		}
-//		if(jpglen)			//正常的jpeg数据 
-//		{
-//			pbuf+=jpgstart;	//偏移到0XFF,0XD8处
-//			res=f_write(f_jpg,pbuf,jpglen,&bwr);
-//			if(bwr!=jpglen)res=0XFE; 
-//			
-//		}else res=0XFD; 
-//	}
-//	jpeg_data_len=0;
-//	f_close(f_jpg); 
+	if(OV5640_Save_photo())
+	{
+		printf("Save photo err!\r\n");
+	}
+
 	OV5640_RGB565_Mode();	//RGB565模式  
 	if(lcdltdc.pwidth!=0)	//RGB屏
 	{
@@ -217,7 +252,19 @@ u8 ov5640_jpg_photo(void)
 	{
 		DCMI_DMA_Init((u32)&LCD->LCD_RAM,0,1,DMA_MDATAALIGN_HALFWORD,DMA_MINC_DISABLE);			//DCMI DMA配置,MCU屏,竖屏
 	}
-	myfree(SRAMIN,f_jpg); 
+	if(lcddev.height>=800)  
+	{
+		yoffset=(lcddev.height-800)/2;
+		outputheight=800;
+		OV5640_WR_Reg(0x3035,0X51);//降低输出帧率，否则可能抖动
+	}else 
+	{
+		yoffset=0;
+		outputheight=lcddev.height;
+	}
+	curline=yoffset;		//行数复位
+	fac=800/outputheight;	//得到比例因子
+ 	OV5640_OutSize_Set((1280-fac*lcddev.width)/2,(800-fac*outputheight)/2,lcddev.width,outputheight); //1:1显示
 	return res;
 }  
 //RGB565测试
@@ -226,7 +273,7 @@ void rgb565_test(void)
 { 
 	u8 key;
 	u8 contrast=2,fac;
-	u8 msgbuf[15];	//消息缓存区 
+	//u8 msgbuf[15];	//消息缓存区 
 	u16 outputheight=0;
 	
 	LCD_Clear(WHITE);
@@ -283,6 +330,11 @@ void rgb565_test(void)
 				case KEY1_PRES:	//执行一次自动对焦
 				{
 					OV5640_Focus_Single();
+				}
+				break;
+				case WKUP_PRES:
+				{
+					ov5640_jpg_photo();
 				}
 				break;
 				default:

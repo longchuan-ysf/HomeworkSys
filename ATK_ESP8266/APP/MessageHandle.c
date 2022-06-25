@@ -320,15 +320,17 @@ void Generate_Random_Name(void)
 uint8_t Http_Save_Date(uint8_t *data,uint32_t len)
 {
 	u16 PathLen,timeout;
-	uint8_t *filepath,*DataBuff;
     pUSBH_WR_MSG pMsgWR;
-
+	
+	pMsgWR = USBH_Malloc_CtrlStruct();
 	PathLen = strlen((char *)HttpRespon.ContentDisposition)+strlen("3:/download/")+1;//1ÊÇ½áÊø·û\0
-	filepath = USBH_Malloc_Path(PathLen);	//ÉêÇëÄÚ´æ
-	sprintf((char *)filepath,"%s%s","3:/download/",HttpRespon.ContentDisposition);
-    DataBuff = USBH_Malloc_WriteBuf(len);
-    mymemcpy(DataBuff, data, len);
-    pMsgWR = USBH_ApplyFor_WR(filepath,DataBuff,len,FA_WRITE|FA_CREATE_ALWAYS);
+	USBH_Malloc_Path(pMsgWR,PathLen);
+
+	sprintf((char *)pMsgWR->path,"%s%s","3:/download/",HttpRespon.ContentDisposition);
+
+	USBH_Malloc_WriteBuf(pMsgWR,WR_BUFF_EX,data);
+	
+    USBH_ApplyFor_WR(pMsgWR,len,FA_WRITE|FA_CREATE_ALWAYS);
     timeout = 0;
 	while(1)
 	{
@@ -623,10 +625,14 @@ void Http_Post_Date(uint8_t *FileName,uint8_t *url)
 	#if TEST_POST==0
 	MessageTxInit(POST,url);
 	#endif
+	pMsgRD = USBH_Malloc_CtrlStruct();
+	
 	PathLen = strlen((char *)FileName)+strlen("3:/update/")+1;//1ÊÇ½áÊø·û\0
-	filepath = USBH_Malloc_Path(PathLen);	//ÉêÇëÄÚ´æ
-	sprintf((char *)filepath,"3:/update/%s",FileName);
-    pMsgRD = USBH_ApplyFor_WR(filepath,0,RD_ALL_DATA,FA_READ);
+
+	USBH_Malloc_Path(pMsgRD,PathLen);
+	sprintf((char *)pMsgRD->path,"3:/update/%s",FileName);
+	
+    USBH_ApplyFor_WR(pMsgRD,RD_ALL_DATA,FA_READ);
     timeout = 0;
 	while(1)
 	{

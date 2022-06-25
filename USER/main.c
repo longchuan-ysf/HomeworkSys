@@ -251,34 +251,34 @@ void start_task(void *p_arg)
 //                 (void*       )0,					
 //                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
 //                 (OS_ERR*     )&err); 
-//	//USB任务
-//	OSTaskCreate((OS_TCB*     )&USB_TaskTCB,		
-//				 (CPU_CHAR*   )"USB task", 		
-//                 (OS_TASK_PTR )USB_task, 			
-//                 (void*       )0,					
-//                 (OS_PRIO	  )USB_TASK_PRIO,     
-//                 (CPU_STK*    )&USB_TASK_STK[0],	
-//                 (CPU_STK_SIZE)USB_STK_SIZE/10,	
-//                 (CPU_STK_SIZE)USB_STK_SIZE,		
-//                 (OS_MSG_QTY  )0,					
-//                 (OS_TICK	  )0,  					
-//                 (void*       )0,					
-//                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-//                 (OS_ERR*     )&err);   
-//	//USB读写任务
-//	OSTaskCreate((OS_TCB*     )&USB_WR_TaskTCB,		
-//				 (CPU_CHAR*   )"USB_WR task", 		
-//                 (OS_TASK_PTR )USB_WR_task, 			
-//                 (void*       )0,					
-//                 (OS_PRIO	  )USB_WR_TASK_PRIO,     
-//                 (CPU_STK*    )&USB_WR_TASK_STK[0],	
-//                 (CPU_STK_SIZE)USB_WR_STK_SIZE/10,	
-//                 (CPU_STK_SIZE)USB_WR_STK_SIZE,		
-//                 (OS_MSG_QTY  )0,					
-//                 (OS_TICK	  )0,  					
-//                 (void*       )0,					
-//                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-//                 (OS_ERR*     )&err); 				 
+	//USB任务
+	OSTaskCreate((OS_TCB*     )&USB_TaskTCB,		
+				 (CPU_CHAR*   )"USB task", 		
+                 (OS_TASK_PTR )USB_task, 			
+                 (void*       )0,					
+                 (OS_PRIO	  )USB_TASK_PRIO,     
+                 (CPU_STK*    )&USB_TASK_STK[0],	
+                 (CPU_STK_SIZE)USB_STK_SIZE/10,	
+                 (CPU_STK_SIZE)USB_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,  					
+                 (void*       )0,					
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+                 (OS_ERR*     )&err);   
+	//USB读写任务
+	OSTaskCreate((OS_TCB*     )&USB_WR_TaskTCB,		
+				 (CPU_CHAR*   )"USB_WR task", 		
+                 (OS_TASK_PTR )USB_WR_task, 			
+                 (void*       )0,					
+                 (OS_PRIO	  )USB_WR_TASK_PRIO,     
+                 (CPU_STK*    )&USB_WR_TASK_STK[0],	
+                 (CPU_STK_SIZE)USB_WR_STK_SIZE/10,	
+                 (CPU_STK_SIZE)USB_WR_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,  					
+                 (void*       )0,					
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+                 (OS_ERR*     )&err); 				 
 	OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err);		//挂起开始任务			 
 	OS_CRITICAL_EXIT();	//退出临界区
 }
@@ -314,7 +314,7 @@ void key_task(void *pdata)
 			}
 			break;
 			case KEY1_PRES:
-			{		
+			{
 				test_http_get();
 			}
 			break;

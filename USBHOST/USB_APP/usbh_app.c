@@ -21,57 +21,94 @@ static u8 connect;
 #define USB_WR_Q_NUM	3	//发送数据的消息队列的数量
 OS_Q USB_WR_Msg;		//定义一个消息队列，接受是否需要读或者写USB
 /*
-外部读流程  
-->USBH_Malloc_Path(size)申请内存填写读取路径
-->USBH_ApplyFor_WR(path,0,mode)请求USB读取
-->USBH_WR_MsgFree()清空申请的内存
+外部读流程
+->USBH_Malloc_CtrlStruct 申请读写控制结构体
+->USBH_Malloc_Path 申请内存填写读取路径
+->USBH_ApplyFor_WR 请求USB读取
+->USBH_WR_MsgFree 清空申请的内存
 
 写流程
-->USBH_Malloc_Path(size)申请内存填写读取路径
-->USBH_Malloc_WriteBuf(size)申请内存保存要写的数据
-->USBH_ApplyFor_WR(path,data,mode)请求USB写
-->USBH_WR_MsgFree()清空申请的内存
+->USBH_Malloc_CtrlStruct 申请读写控制结构体
+->USBH_Malloc_Path 申请内存填写读取路径
+->USBH_Malloc_WriteBuf 申请内存保存要写的数据 
+->USBH_ApplyFor_WR 请求USB写
+->USBH_WR_MsgFree 清空申请的内存
 */
 
  /**
 ****************************************************************************************
-@brief:    USBH_Malloc_Path 申请内存以填写路径
-@Input：    size 路径字符串所占字符串长度
+@brief:    USBH_Malloc_CtrlStruct 申请内存以控制读写结构体
+@Input：    NULL
 @Output：   NULL
 @Return：   申请到的内存指针
 @Warning:   NULL   
 @note:    uint16_t的长度一般够用了
 ****************************************************************************************
  **/
-void *USBH_Malloc_Path(uint16_t size)
+pUSBH_WR_MSG USBH_Malloc_CtrlStruct(void)
+{ 
+	pUSBH_WR_MSG pUSBwrMsg = mymalloc(SRAMIN,sizeof(pUSBH_WR_MSG));
+	if(!pUSBwrMsg)
+	{
+		printf("%s malloc for pUSBwrMsg err!\r\n",__func__);
+		return 	NULL;
+	}
+	
+	return pUSBwrMsg;
+}
+
+ /**
+****************************************************************************************
+@brief:    USBH_Malloc_Path 申请内存以填写路径
+@Input：    size 路径字符串所占字符串长度
+			pUSBwrMsg 读写控制结构体
+@Output：   NULL
+@Return：   申请到的内存指针
+@Warning:   NULL   
+@note:    uint16_t的长度一般够用了
+****************************************************************************************
+ **/
+void USBH_Malloc_Path(pUSBH_WR_MSG pUSBwrMsg,uint16_t size)
 { 
 	uint8_t *p=mymalloc(SRAMIN,size);
 	mymemset(p,0,size);
-	
-	return (void *)p;
+	pUSBwrMsg->path = p;
+	return ;
 }
  /**
 ****************************************************************************************
 @brief:    USBH_Malloc_WriteBuf 申请内存以保存要写的内容
 @Input：    size 数据大小
+			pUSBwrMsg 读写控制结构体
+			ExBuff 外部数据缓存区的指针
 @Output：   NULL
 @Return：   申请到的内存指针
 @Warning:   NULL   
 @note:    
 ****************************************************************************************
  **/
-void *USBH_Malloc_WriteBuf(uint32_t size)
+void USBH_Malloc_WriteBuf(pUSBH_WR_MSG pUSBwrMsg,uint32_t size,uint8_t *ExBuff)
 {
-	uint8_t *p=mymalloc(SRAMEX,size);
-	mymemset(p,0,size);
-	return (void *)p;
+	if(size == WR_BUFF_EX)
+	{
+		pUSBwrMsg->WRbufCtrl = WR_BUFF_EX;
+		pUSBwrMsg->data = ExBuff;
+	}
+	else
+	{
+		uint8_t *p=mymalloc(SRAMEX,size);
+		mymemset(p,0,size);
+		pUSBwrMsg->WRbufCtrl = WR_BUFF_USB;
+		pUSBwrMsg->data = p;
+	}
+	
+	return ;
 }
  /**
 ****************************************************************************************
-@brief:    pUSBH_WR_MSG 请求USB进行一次读或者写
-@Input：    path 读或者写的路径
-			mode 读或者写的模式
-			data 数据指针
+@brief:    USBH_WR_MsgFree 释放读写过程中申请的内存
+@Input：    pUSBwrMsg 读或者写控制结构体指针
+			IsClearDateBuf 是否清除数据
 @Output：   NULL
 @Return：   NULL
 @Warning:   NULL   
@@ -82,8 +119,14 @@ void USBH_WR_MsgFree(pUSBH_WR_MSG pUSBwrMsg)
 {
 	//清空填写路径申请的内存
 	myfree(SRAMIN,pUSBwrMsg->path);
-	//清空数据申请的内存
-	myfree(SRAMEX,pUSBwrMsg->data);
+	
+	//如果写buf区是由USB模块申请的才需要释放
+	if(pUSBwrMsg->WRbufCtrl == WR_BUFF_USB)
+	{
+		//清空数据申请的内存
+		myfree(SRAMEX,pUSBwrMsg->data);
+	}
+	
 	//清空WR_Msg
 	myfree(SRAMIN,pUSBwrMsg);
 }
@@ -129,6 +172,7 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 			pUSBwrMsg->result = FR_INVALID_PARAMETER;
 			return;
 		}
+		pUSBwrMsg->WRbufCtrl = WR_BUFF_USB;
 		res = f_read(&File,pUSBwrMsg->data,RWLength,(UINT *)&bread);
 		if((res != FR_OK)) 	
 		{
@@ -190,27 +234,20 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
  /**
 ****************************************************************************************
 @brief:    pUSBH_WR_MSG 请求USB进行一次读或者写
-@Input：    path 读或者写的路径
+@Input：    pUSBwrMsg
 			mode 读或者写的模式
-			data 数据指针
+			DataLength 数据长度 
+			数据缓冲区  路径已经分配好
 @Output：   NULL
 @Return：   指向消息发送的结构体指针
 @Warning:   NULL   
 @note:    
 ****************************************************************************************
  **/
-void *USBH_ApplyFor_WR(uint8_t *path,uint8_t *data,uint32_t DataLength,uint8_t mode)
+void USBH_ApplyFor_WR(pUSBH_WR_MSG pUSBwrMsg,uint32_t DataLength,uint8_t mode)
 {
 	OS_ERR err;
-	pUSBH_WR_MSG pUSBwrMsg = mymalloc(SRAMIN,sizeof(pUSBH_WR_MSG));
-	if(!pUSBwrMsg)
-	{
-		printf("%s malloc for pUSBwrMsg err!\r\n",__func__);
-		return 	NULL;
-	}
 	pUSBwrMsg->mode = mode;
-	pUSBwrMsg->path = path;
-	pUSBwrMsg->data = data;
 	pUSBwrMsg->length = DataLength;
 	pUSBwrMsg->bread = 0;
 	pUSBwrMsg->result = 0xff;
@@ -222,7 +259,7 @@ void *USBH_ApplyFor_WR(uint8_t *path,uint8_t *data,uint32_t DataLength,uint8_t m
 			(OS_OPT		)OS_OPT_POST_FIFO,
 			(OS_ERR *	)&err);
 			
-	return pUSBwrMsg;
+	return ;
 }
 
  /**
