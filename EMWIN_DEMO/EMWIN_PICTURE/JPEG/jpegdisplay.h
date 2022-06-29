@@ -19,7 +19,7 @@
 //图片是加载到RAM中的，因此不能大于JEGPMEMORYSIZE
 //注意：显示BMP图片时内存申请使用的EMWIN的内存申请函数，因此
 //JPEGMEMORYSIZE不能大于我们给EMWIN分配的内存池大小
-#define JPEGMEMORYSIZE	(8*1024*1024)	//图片大小不大于10M
+#define JPEGMEMORYSIZE	(3*1024*1024)	//图片大小不大于3M
 
 //绘制无需加载到RAM中的JPEG图片时，图片每行的字节数
 #define JPEGPERLINESIZE	2*1024		

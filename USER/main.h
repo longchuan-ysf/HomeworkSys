@@ -81,6 +81,9 @@
 #include "fattester.h"	
 #include "usbh_app.h"
 #include "camera_app.h"
+#include "GUI.h"
+#include "PageHandle.h"
+#include "buttonbmp.h"
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

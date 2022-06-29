@@ -55,7 +55,7 @@ void emwindemo_task(void *p_arg);
 //设置任务优先级
 #define KEY_TASK_PRIO 				6
 //任务堆栈大小
-#define KEY_STK_SIZE				512
+#define KEY_STK_SIZE				1024
 //任务控制块
 OS_TCB KeyTaskTCB;
 //任务堆栈
@@ -237,20 +237,20 @@ void start_task(void *p_arg)
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR|OS_OPT_TASK_SAVE_FP,
                  (OS_ERR*     )&err);	                 
 ; 
-//	//按键任务
-//	OSTaskCreate((OS_TCB*     )&KeyTaskTCB,		
-//				 (CPU_CHAR*   )"Key task", 		
-//                 (OS_TASK_PTR )key_task, 			
-//                 (void*       )0,					
-//                 (OS_PRIO	  )KEY_TASK_PRIO,     
-//                 (CPU_STK*    )&KEY_TASK_STK[0],	
-//                 (CPU_STK_SIZE)KEY_STK_SIZE/10,	
-//                 (CPU_STK_SIZE)KEY_STK_SIZE,		
-//                 (OS_MSG_QTY  )0,					
-//                 (OS_TICK	  )0,  					
-//                 (void*       )0,					
-//                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
-//                 (OS_ERR*     )&err); 
+	//按键任务
+	OSTaskCreate((OS_TCB*     )&KeyTaskTCB,		
+				 (CPU_CHAR*   )"Key task", 		
+                 (OS_TASK_PTR )key_task, 			
+                 (void*       )0,					
+                 (OS_PRIO	  )KEY_TASK_PRIO,     
+                 (CPU_STK*    )&KEY_TASK_STK[0],	
+                 (CPU_STK_SIZE)KEY_STK_SIZE/10,	
+                 (CPU_STK_SIZE)KEY_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,  					
+                 (void*       )0,					
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR,
+                 (OS_ERR*     )&err); 
 	//USB任务
 	OSTaskCreate((OS_TCB*     )&USB_TaskTCB,		
 				 (CPU_CHAR*   )"USB task", 		
@@ -284,13 +284,16 @@ void start_task(void *p_arg)
 }
 
 //EMWINDEMO任务
+
 void emwindemo_task(void *p_arg)
 {
-	//CreateFramewin();
+	OS_ERR err;
+	uint32_t i;
+	CreateFramewin();
 	while(1)
 	{
-	   camera_app_main();
-       GUI_Delay(100);
+       GUI_Delay(1);
+	   //OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
 	}
 }
 extern void test_http_post(void);
@@ -299,27 +302,42 @@ extern void test_post(void);
 void key_task(void *pdata)
 {
 	OS_ERR err;
-	atk_8266_test();
-	BackGroundInit();
+//	atk_8266_test();
+//	BackGroundInit();
+	camera_app_init();
 	u8 key;
 	while(1)
 	{
-		MessageRxHandle();
+//		MessageRxHandle();
 		key = KEY_Scan(0);
-		switch(key)
+//		switch(key)
+//		{
+//			case KEY0_PRES:
+//			{
+//				test_http_post();				
+//			}
+//			break;
+//			case KEY1_PRES:
+//			{
+//				test_http_get();
+//			}
+//			break;
+//		}
+		if(CurrentPage==PAGE_CAMERA)
 		{
-			case KEY0_PRES:
+			if(rgb565_data_ok)
 			{
-				test_http_post();				
+				rgb565_data_ok=0;
+//				printf("WM_InvalidateWindow(WM_Camera)\r\n");
+				WM_InvalidateWindow(WM_Camera);
+				
 			}
-			break;
-			case KEY1_PRES:
-			{
-				test_http_get();
-			}
-			break;
 		}
-		OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
+		else if(CurrentPage==PAGE_VIEW)
+		{
+		
+		}
+		OSTimeDlyHMSM(0,0,0,1,OS_OPT_TIME_PERIODIC,&err);//延时1ms
 
 	}
 }
@@ -380,7 +398,7 @@ void led0_task(void *p_arg)
 		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//延时500ms
 		if(time == 10)//5秒输出一次内存使用率
 		{
-			Memory_Usage();
+			//Memory_Usage();
 			time = 0;
 		}
 	}

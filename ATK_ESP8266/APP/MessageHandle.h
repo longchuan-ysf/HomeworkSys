@@ -41,14 +41,7 @@ typedef struct
 	uint8_t Method;//收到数据的类型 收到的POST请求还是 GET的回复 或者自己POST的回复
 }Http_Respon;
 
-//出于效率考虑使用宏定义指定目录下可扫描的最大文件数量
-#define DIR_MAX_NUM				255
-typedef struct 
-{
-	char** file_name;//文件名指针数组
-	uint32_t *file_size;//文件大小数组
-	uint32_t file_num;//有效的文件名个数
-}File_Scan;
+
 
 typedef struct 
 {

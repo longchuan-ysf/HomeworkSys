@@ -44,7 +44,7 @@ const char testend[] =\
 #endif
 
 Http_Respon  HttpRespon;//http的响应头解析
-File_Scan pbuf;//目录扫描结果存放
+
 //文件拓展名和 ContentType-type之间的关系
 const Http_File_Attribute HttpFileAttribute[] =
 {
@@ -349,102 +349,7 @@ uint8_t Http_Save_Date(uint8_t *data,uint32_t len)
 	}
 }
 
-//释放内存，在读取完信息后进行释放
-void Dir_Scan_Free(File_Scan* pbuf)
-{
-	for(uint16_t i=0;i<pbuf->file_num;i++)
-	{
-		myfree(SRAMIN,pbuf->file_name[i]);
-	}
-	myfree(SRAMIN,pbuf->file_name);
-	myfree(SRAMIN,pbuf->file_size);
-	pbuf->file_num=0;
-}
-/*
-扫描指定路径下的某种类型文件,扫描一种类型的文件就需要定义一个File_Scan
-类型的结构体,在读出包含的信息后，调用Dir_Scan_Free释放内存
-dir_path:文件夹路径，形如:"0:/APP/ICON"
-use_file:扫描的后缀名,形如:"txt",若输入为"*"，则扫描目录下的所有存在后缀名的文件;
-scanfile:已分配内存的句柄
-*/
-FRESULT Dir_Scan(const char* dir_path,const char* use_file,File_Scan* scanfile)
-{
-	FRESULT res = FR_OK;
-	FILINFO* FileInfo;	//文件信息
-	DIR* dir;  			//目录
-	
-	dir=(DIR*)mymalloc(SRAMIN,sizeof(DIR));
-	
-	res=f_opendir(dir,dir_path);
-	printf("%s:open dir=%s,res=%d\r\n",__func__,dir_path,res);
-	
-	FileInfo=(FILINFO*)mymalloc(SRAMIN,sizeof(FILINFO));
-	if(!FileInfo)
-	{
-		res = FR_NOT_ENOUGH_CORE; 
-		printf("fileinfo malloc err!\r\n");
-	}
-	
-	scanfile->file_name=(char**)mymalloc(SRAMIN,DIR_MAX_NUM*sizeof(char*));
-	scanfile->file_size = (uint32_t *)mymalloc(SRAMIN,DIR_MAX_NUM*sizeof(uint32_t));
-	
-	if(!scanfile->file_name)
-	{
-		res = FR_NOT_ENOUGH_CORE; 
-		printf("scanfile malloc err!\r\n");
-	}
-	
-	scanfile->file_num=0;
-	
-	if(res==FR_OK)
-	{
-		while(1)
-		{
-			char* pstr;
-			res = f_readdir(dir, FileInfo);     //读取目录下的一个文件
-	        if ((res != FR_OK)||(FileInfo->fname[0]==0) ||(scanfile->file_num>DIR_MAX_NUM))
-			{
-				printf("f_readdir err %d\r\n",res);
-				break;  						//错误了//到末尾了//达到最大读取数目,退出
-			}
-			if(FileInfo->fattrib&AM_DIR)continue;//跳过目录
-			pstr=strrchr(FileInfo->fname,'.');	//从右向左查找'.'的位置
-			if(pstr==NULL)continue;				//无后缀名的跳过
-			pstr++;								//去掉'.'
-			
-			if((strcasecmp(pstr,use_file)==0)||(use_file[0]=='*'))
-			{
 
-				scanfile->file_name[scanfile->file_num]=(char*)mymalloc(SRAMIN,strlen(FileInfo->fname)+1);
-				mymemset(scanfile->file_name[scanfile->file_num],0,strlen(FileInfo->fname)+1);
-				strcpy(scanfile->file_name[scanfile->file_num],FileInfo->fname);
-				scanfile->file_size[scanfile->file_num] = FileInfo->fsize;
-				
-				scanfile->file_num++;
-			}			
-		}
-	}
-	f_closedir(dir);
-	myfree(SRAMIN,dir);
-	myfree(SRAMIN,FileInfo);
-	return res;
-}
-
-
-void test_ff_free(void)
-{
-	Dir_Scan_Free(&pbuf);
-}
-void test_ff(char* scan_dir,char* choose_file)
-{
-	Dir_Scan(scan_dir,choose_file,&pbuf);
-	for(uint8_t i=0;i<pbuf.file_num;i++)
-	{
-		printf("\r\n%s",scan_dir);
-		printf("/%s",pbuf.file_name[i]);
-	}
-	test_ff_free();
-}
 
  /**
 ****************************************************************************************
@@ -660,13 +565,9 @@ post_return:
 
 void test_http_post()
 {
-	HttpRespon.Method = POST;//标记等待GET回复
-	OS_ERR err;
-	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
+	HttpRespon.Method = POST;//标记等待GET回复	
 	Http_Post_Date("zhongli.jpg","/HFS/");
-
-	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量	
-  
+ 
 }
 void test_post(void)
 {

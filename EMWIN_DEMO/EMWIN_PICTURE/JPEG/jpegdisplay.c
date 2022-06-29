@@ -29,6 +29,7 @@ static char jpegBuffer[JPEGPERLINESIZE];
 *
 ********************************************************************
 */
+
 /*********************************************************************
 *
 *       _GetData
@@ -111,17 +112,20 @@ int displyjpeg(u8 *JPEGFileName,u8 mode,u32 x,u32 y,int member,int denom)
 
 	result = f_open(&JPEGFile,(const TCHAR*)JPEGFileName,FA_READ);	//打开文件
 	//文件打开错误或者文件大于JPEGMEMORYSIZE
-	if((result != FR_OK) || (JPEGFile.obj.objsize>JPEGMEMORYSIZE)) 	return 1;
+	if((result != FR_OK) || (JPEGFile.obj.objsize>JPEGMEMORYSIZE)) 	
+		return 1;
 	
 	jpegbuffer=mymalloc(SRAMEX,JPEGFile.obj.objsize);	//申请内存
-	if(jpegbuffer == NULL) return 2;
+	if(jpegbuffer == NULL) 
+		return 2;
 	
 	#if SYSTEM_SUPPORT_OS
 		OS_CRITICAL_ENTER();		//临界区
 	#endif
 		
 	result = f_read(&JPEGFile,jpegbuffer,JPEGFile.obj.objsize,(UINT *)&bread); //读取数据
-	if(result != FR_OK) return 3;
+	if(result != FR_OK) 
+		return 3;
 	
 	#if SYSTEM_SUPPORT_OS
 		OS_CRITICAL_EXIT();	//退出临界区

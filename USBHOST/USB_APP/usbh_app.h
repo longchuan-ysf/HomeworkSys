@@ -22,6 +22,7 @@ typedef struct
 	uint8_t WRbufCtrl;//写buff是需要USB模块申请还是说不需要
 }USBH_WR_MSG,*pUSBH_WR_MSG;
 
+extern uint8_t connect_usb;
 extern void usb_app_main(void);
 extern void usb_app_wr(void);
 

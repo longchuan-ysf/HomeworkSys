@@ -23,6 +23,11 @@
 #include "HomeworkGUI.h"
 #include "EmWinHZFont.h"
 #include "buttonbmp.h"
+#include "ImageDisplay.h"
+#include "usbh_app.h"
+#include "PageHandle.h"
+#include "jpegdisplay.h"
+#include "camera_app.h"
 /*********************************************************************
 *
 *       Defines
@@ -33,6 +38,7 @@
 #define ID_MULTIPAGE_0    (GUI_ID_USER + 0x01)
 
 GUI_BITMAP buttonbmp_tab[2];
+WM_HWIN WM_Camera;
 // USER START (Optionally insert additional defines)
 // USER END
 
@@ -62,11 +68,24 @@ struct GUI_WIDGET_CREATE_INFO_struct {
   U32                      NumExtraBytes;    // Number of extra bytes usable with <WIDGET>_SetUserData & <WIDGET>_GetUserData
 };
 */
+//470*745
+static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage1[] = {
+//pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
+  { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     780,    FRAMEWIN_CF_MOVEABLE                        },
+  { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE0,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        200,   730,    100,     16,   TEXT_CF_LEFT                                },
+};  
+static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
+//pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
+  { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     780,    FRAMEWIN_CF_MOVEABLE                        },
+  { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE1,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT1,        200,   730,    100,     16,   TEXT_CF_LEFT                                },
+};  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     700,    FRAMEWIN_CF_MOVEABLE },
   { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      180,  10,    110,     40,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        50,   20,    100,     25,     TEXT_CF_LEFT },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     1,     TEXT_CF_LEFT },
   { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   60,    200,     500,    0 },
 };
 
@@ -87,6 +106,130 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreate[] = {
 *
 **********************************************************************
 */
+
+static void _cbDialogPage1(WM_MESSAGE * pMsg) {
+	WM_HWIN hItem;
+	WM_HWIN hDlg;
+	int     NCode;
+	int     Id;
+
+	hDlg = pMsg->hWin;
+	switch (pMsg->MsgId) {
+	case WM_INIT_DIALOG:	  
+	{
+		printf("init page 1\r\n");
+	
+		//初始化TEXT
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
+		TEXT_SetFont(hItem,&GUI_FontHZ16);
+		TEXT_SetText(hItem,"共   图片");
+	}
+	break;
+	case WM_NOTIFY_PARENT:
+	{	
+		Id    = WM_GetId(pMsg->hWinSrc);
+		NCode = pMsg->Data.v;	
+		printf("notify from page 1,ID = %d, NCode = %d\r\n",Id, NCode);
+		switch(Id) 
+		{
+			case GUI_ID_IMAGE0: 
+			{
+				hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_IMAGE0);
+				switch(NCode) 
+				{
+					case WM_NOTIFICATION_CLICKED:
+					// USER START (Optionally insert code for reacting on notification message)
+					// USER END
+					break;
+					case WM_NOTIFICATION_RELEASED:
+					{
+					}
+					break;
+					case WM_NOTIFICATION_MOVED_OUT:
+					// USER START (Optionally insert code for reacting on notification message)
+					// USER END
+					break;
+					case WM_NOTIFICATION_VALUE_CHANGED:
+					// USER START (Optionally insert code for reacting on notification message)
+					// USER END
+					break;	
+				}
+			} 
+			break;
+
+		}
+	}
+	break;
+	default:
+		WM_DefaultProc(pMsg);
+	}
+}
+static void _cbDialogPage2(WM_MESSAGE * pMsg) {
+	WM_HWIN hItem;
+	WM_HWIN hDlg;
+	int     NCode;
+	int     Id;
+
+	hDlg = pMsg->hWin;
+	switch (pMsg->MsgId) {
+	case WM_INIT_DIALOG:	  
+	{
+		printf("init page 1\r\n");
+	
+		//初始化TEXT
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
+		TEXT_SetFont(hItem,&GUI_FontHZ16);
+		TEXT_SetText(hItem,"共   图片");
+	}
+	break;
+	case WM_PAINT:	  
+	{
+
+		//hItem = WM_GetDialogItem(hDlg, GUI_ID_IMAGE1);
+	    IMAGE_SetBitmap(WM_Camera,&bm2_c);
+		Start_Camera();
+	
+	}
+	break;
+	case WM_NOTIFY_PARENT:
+	{	
+		Id    = WM_GetId(pMsg->hWinSrc);
+		NCode = pMsg->Data.v;	
+		printf("notify from page 1,ID = %d, NCode = %d\r\n",Id, NCode);
+		switch(Id) 
+		{
+			case GUI_ID_IMAGE0: 
+			{
+				hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_IMAGE0);
+				switch(NCode) 
+				{
+					case WM_NOTIFICATION_CLICKED:
+					// USER START (Optionally insert code for reacting on notification message)
+					// USER END
+					break;
+					case WM_NOTIFICATION_RELEASED:
+					{
+					}
+					break;
+					case WM_NOTIFICATION_MOVED_OUT:
+					// USER START (Optionally insert code for reacting on notification message)
+					// USER END
+					break;
+					case WM_NOTIFICATION_VALUE_CHANGED:
+					// USER START (Optionally insert code for reacting on notification message)
+					// USER END
+					break;	
+				}
+			} 
+			break;
+
+		}
+	}
+	break;
+	default:
+		WM_DefaultProc(pMsg);
+	}
+}
 static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	WM_HWIN hItem;
 	WM_HWIN hDlg;
@@ -158,68 +301,90 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 	WM_HWIN hDialog;
 	int     NCode;
 	int     Id;
-
-
+	char PageIndex;
+	PAGEHANDLE_PARA para;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:
-	//
-	// 初始化框架
-	//
-	hItem = pMsg->hWin;
-	FRAMEWIN_SetText(hItem, "作业查看提交系统");
-	FRAMEWIN_SetTitleHeight(hItem, 25);
-	FRAMEWIN_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
-	FRAMEWIN_SetFont(hItem, &GUI_FontHZ24);
-	//
-	// 初始化多页显示工具
-	//
-	hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);
-	
-	//第一页
-	MULTIPAGE_AddEmptyPage(hItem, 0, "查看作业");
-	//第二页
-	MULTIPAGE_AddEmptyPage(hItem, 0, "提交作业");
-	//第三页
-	hDialog = GUI_CreateDialogBox(_aDialogCreatePage3, GUI_COUNTOF(_aDialogCreatePage3), _cbDialogPage3, WM_UNATTACHED, 0, 0);
-	MULTIPAGE_AddPage(hItem, hDialog, "系统设置");
-	
-
-
-	MULTIPAGE_SetTabWidth(hItem,100,0); //not supported for v5.24		
-	MULTIPAGE_SetTabWidth(hItem,100, 1); //not supported for v5.24
-	MULTIPAGE_SetTabWidth(hItem,100, 2); //not supported for v5.24
-	MULTIPAGE_SetFont(hItem,&GUI_FontHZ16);
-	// USER START (Optionally insert additional code for further widget initialization)
-	// USER END
+	{
+		printf("init multipage \r\n");
+		//
+		// 初始化框架
+		//
+		hItem = pMsg->hWin;
+		FRAMEWIN_SetText(hItem, "作业查看提交系统");
+		FRAMEWIN_SetTitleHeight(hItem, 25);
+		FRAMEWIN_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
+		FRAMEWIN_SetFont(hItem, &GUI_FontHZ24);
+		//
+		// 初始化多页显示工具
+		//
+		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);
+		
+		//第一页
+		hDialog = GUI_CreateDialogBox(_aDialogCreatePage1, GUI_COUNTOF(_aDialogCreatePage1), _cbDialogPage1, WM_UNATTACHED, 0, 0);
+		MULTIPAGE_AddPage(hItem, hDialog, "查看作业");
+		
+		hDialog = GUI_CreateDialogBox(_aDialogCreatePage2, GUI_COUNTOF(_aDialogCreatePage2), _cbDialogPage2, WM_UNATTACHED, 0, 0);
+		MULTIPAGE_AddPage(hItem, hDialog, "提交作业");
+		
+		//第三页
+		hDialog = GUI_CreateDialogBox(_aDialogCreatePage3, GUI_COUNTOF(_aDialogCreatePage3), _cbDialogPage3, WM_UNATTACHED, 0, 0);
+		MULTIPAGE_AddPage(hItem, hDialog, "系统设置");
+		CurrentPage=2;//当前页面
+		PreviousPage=2;//之前页面
+		
+//		PageIndex=MULTIPAGE_GetSelection (hItem); 
+//		PageHnadle_main(PageIndex);
+		MULTIPAGE_SetTabWidth(hItem,100,0); //not supported for v5.24		
+		MULTIPAGE_SetTabWidth(hItem,100,1); //not supported for v5.24
+		MULTIPAGE_SetTabWidth(hItem,100,2); //not supported for v5.24
+		MULTIPAGE_SetFont(hItem,&GUI_FontHZ16);
+		
+		WM_Camera  = WM_GetDialogItem(hItem, GUI_ID_IMAGE1);
+		// USER START (Optionally insert additional code for further widget initialization)
+		// USER END
+	}
 	break;
 	case WM_NOTIFY_PARENT:
-	Id    = WM_GetId(pMsg->hWinSrc);
-	NCode = pMsg->Data.v;
-	switch(Id) {
-	case ID_MULTIPAGE_0: // Notifications sent by 'Multipage'
-	  switch(NCode) {
-	  case WM_NOTIFICATION_CLICKED:
-		// USER START (Optionally insert code for reacting on notification message)
+	{
+		Id    = WM_GetId(pMsg->hWinSrc);
+		NCode = pMsg->Data.v;
+		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);
+		printf("notify from  multipage Id=%d,NCode=%d\r\n",Id,NCode);
+		switch(Id) {
+		case ID_MULTIPAGE_0: // Notifications sent by 'Multipage'
+		  switch(NCode) {
+		  case WM_NOTIFICATION_CLICKED:
+			// USER START (Optionally insert code for reacting on notification message)
+			// USER END
+			break;
+		  case WM_NOTIFICATION_RELEASED:
+			// USER START (Optionally insert code for reacting on notification message)
+			// USER END
+			break;
+		  case WM_NOTIFICATION_MOVED_OUT:
+			// USER START (Optionally insert code for reacting on notification message)
+			// USER END
+			break;
+		  case WM_NOTIFICATION_VALUE_CHANGED:		
+		  {
+				// 此时的hItem是  Multipage
+				PageIndex=MULTIPAGE_GetSelection (hItem);
+				// 此时的hItem是  IMAGE0
+				hItem = WM_GetDialogItem(hItem, GUI_ID_IMAGE0);
+				para.page= PageIndex;
+				para.hItem = hItem;
+
+				PageHnadle_main(&para);
+			}
+			break;
+		  // USER START (Optionally insert additional code for further notification handling)
+		  // USER END
+		  }
+		  break;
+		// USER START (Optionally insert additional code for further Ids)
 		// USER END
-		break;
-	  case WM_NOTIFICATION_RELEASED:
-		// USER START (Optionally insert code for reacting on notification message)
-		// USER END
-		break;
-	  case WM_NOTIFICATION_MOVED_OUT:
-		// USER START (Optionally insert code for reacting on notification message)
-		// USER END
-		break;
-	  case WM_NOTIFICATION_VALUE_CHANGED:
-		// USER START (Optionally insert code for reacting on notification message)
-		// USER END
-		break;
-	  // USER START (Optionally insert additional code for further notification handling)
-	  // USER END
-	  }
-	  break;
-	// USER START (Optionally insert additional code for further Ids)
-	// USER END
+		}
 	}
 	break;
 	// USER START (Optionally insert additional message handling)
@@ -245,6 +410,7 @@ WM_HWIN CreateFramewin(void) {
 	WM_HWIN hWin;
 	buttonbmp_tab[0]=bmBUTTONOFF;
 	buttonbmp_tab[1]=bmBUTTONON;
+	
 	hWin = GUI_CreateDialogBox(_aDialogCreate, GUI_COUNTOF(_aDialogCreate), _cbDialog, WM_HBKWIN, 0, 0);
 	return hWin;
 }

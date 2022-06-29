@@ -14,7 +14,7 @@
 #endif
 USBH_HandleTypeDef hUSBHost;
 
-static u8 connect;
+uint8_t connect_usb;
 
 ////////////////////////消息队列//////////////////////////////
 
@@ -273,6 +273,8 @@ void USBH_ApplyFor_WR(pUSBH_WR_MSG pUSBwrMsg,uint32_t DataLength,uint8_t mode)
 @note:    
 ****************************************************************************************
  **/
+extern void test_ff(char* scan_dir,char* choose_file);
+extern void test_ff_free(void);
 static void USBH_UserProcess(USBH_HandleTypeDef * phost, uint8_t id)
 {
     u32 total,free;
@@ -285,7 +287,8 @@ static void USBH_UserProcess(USBH_HandleTypeDef * phost, uint8_t id)
 			{
 				f_mount(0,"3:",1); 	//卸载U盘   
 				printf("%s\r\n","设备连接中..."); 
-				connect=0;				
+				connect_usb=0;	
+				test_ff_free();				
 			}			
             break;
         case HOST_USER_CLASS_ACTIVE:
@@ -298,8 +301,9 @@ static void USBH_UserProcess(USBH_HandleTypeDef * phost, uint8_t id)
 					printf("%s\r\n","FATFS OK!");	
 					printf("U Disk Total Size: %d  MB\r\n",total>>10);	 
 					printf("U Disk  Free Size:  %d   MB\r\n",free>>10); 	    
-					connect=1;
+					connect_usb=1;
 					mf_scan_files("3:");
+					test_ff("3:/download","jpg");
 				}
 				else
 				{
@@ -319,7 +323,7 @@ void usb_app_main(void)
 {
 	  
  	OS_ERR err;
-	connect = 0;
+	connect_usb = 0;
 	printf("Init USB\r\n");
     USBH_Init(&hUSBHost, USBH_UserProcess, 0);
     USBH_RegisterClass(&hUSBHost, USBH_MSC_CLASS);
@@ -345,7 +349,7 @@ void usb_app_wr(void)
                (OS_ERR *	)&err);
     while (1)
     {
-		if(connect)
+		if(connect_usb)
 		{
 			//请求消息KEY_Msg
 			pUSBwrMsg = (pUSBH_WR_MSG)OSQPend((OS_Q *			)&USB_WR_Msg,
