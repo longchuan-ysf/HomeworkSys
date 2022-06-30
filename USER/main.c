@@ -55,7 +55,7 @@ void emwindemo_task(void *p_arg);
 //设置任务优先级
 #define KEY_TASK_PRIO 				6
 //任务堆栈大小
-#define KEY_STK_SIZE				1024
+#define KEY_STK_SIZE				256
 //任务控制块
 OS_TCB KeyTaskTCB;
 //任务堆栈
@@ -322,7 +322,8 @@ void key_task(void *pdata)
 		}
 		else if(CurrentPage==PAGE_VIEW)
 		{
-		
+			key = KEY_Scan(0);
+			Image_Display_Key(key);
 		}
 		OSTimeDlyHMSM(0,0,0,5,OS_OPT_TIME_PERIODIC,&err);//延时1ms
 
@@ -385,7 +386,7 @@ void led0_task(void *p_arg)
 		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//延时500ms
 		if(time == 10)//5秒输出一次内存使用率
 		{
-			//Memory_Usage();
+			Memory_Usage();
 			time = 0;
 		}
 	}

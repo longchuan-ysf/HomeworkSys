@@ -12,9 +12,10 @@
 #include "string.h"
 #include "delay.h"
 #include "jpegdisplay.h"
-File_Scan pbuf;//目录扫描结果存放
+#include "key.h"
+File_Scan DownloadPicture;//目录扫描结果存放
 
-
+uint8_t PictureIndex;
 //释放内存，在读取完信息后进行释放
 void Dir_Scan_Free(File_Scan* pbuf)
 {
@@ -106,7 +107,7 @@ FRESULT Dir_Scan(const char* dir_path,const char* use_file,File_Scan* scanfile)
 
 void test_ff_free(void)
 {
-	Dir_Scan_Free(&pbuf);
+	Dir_Scan_Free(&DownloadPicture);
 }
  /**
 ****************************************************************************************
@@ -121,152 +122,19 @@ void test_ff_free(void)
  **/
 void test_ff(char* scan_dir,char* choose_file)
 {
-	pbuf.ScanResult=Dir_Scan(scan_dir,choose_file,&pbuf);
-    if(pbuf.ScanResult == FR_OK)
+	DownloadPicture.ScanResult=Dir_Scan(scan_dir,choose_file,&DownloadPicture);
+    if(DownloadPicture.ScanResult == FR_OK)
     {
-    	for(uint8_t i=0;i<pbuf.file_num;i++)
+    	for(uint8_t i=0;i<DownloadPicture.file_num;i++)
     	{
     		//printf("\r\n%s",scan_dir);
-    		printf("fiel = %s, size = %d\r\n",pbuf.file_name[i],pbuf.file_size[i]);
+    		printf("fiel = %s, size = %d\r\n",DownloadPicture.file_name[i],DownloadPicture.file_size[i]);
     	}
+		PictureIndex=0;
     }
 }
 
 
-/*********************************************************************
-*
-*       _GetData
-*
-* Function description
-*   This routine is called by GUI_JPEG_DrawEx(). The routine is responsible
-*   for setting the data pointer to a valid data location with at least
-*   one valid byte.
-*
-* Parameters:
-*   p           - Pointer to application defined data.
-*   NumBytesReq - Number of bytes requested.
-*   ppData      - Pointer to data pointer. This pointer should be set to
-*                 a valid location.
-*   StartOfFile - If this flag is 1, the data pointer should be set to the
-*                 beginning of the data stream.
-*
-* Return value:
-*   Number of data bytes available.
-*/
-//static int JpegGetData(void * p, const U8 ** ppData, unsigned NumBytesReq, U32 Off) 
-//{
-//	static int readaddress=0;
-//	FIL * phFile;
-//	UINT NumBytesRead;
-//	#if SYSTEM_SUPPORT_OS
-//		CPU_SR_ALLOC();
-//	#endif
-
-//	phFile = (FIL *)p;
-//	
-//	if (NumBytesReq > sizeof(jpegBuffer)) 
-//	{
-//		NumBytesReq = sizeof(jpegBuffer);
-//	}
-
-//	//移动指针到应该读取的位置
-//	if(Off == 1) readaddress = 0;
-//	else readaddress=Off;
-//	
-//	#if SYSTEM_SUPPORT_OS
-//		OS_CRITICAL_ENTER();	//进入临界区
-//	#endif
-//		
-//	f_lseek(phFile,readaddress); 
-//	
-//	//读取数据到缓冲区中
-//	f_read(phFile,jpegBuffer,NumBytesReq,&NumBytesRead);
-//	
-//	#if SYSTEM_SUPPORT_OS
-//		OS_CRITICAL_EXIT();//退出临界区
-//	#endif
-//	
-//	*ppData = (U8 *)jpegBuffer;
-//	return NumBytesRead;//返回读取到的字节数
-//}
-
-////在指定位置显示加载到RAM中的JPEG图片
-////JPEGFileName:图片在SD卡或者其他存储设备中的路径(需文件系统支持！)
-////mode:显示模式
-////		0 在指定位置显示，有参数x,y确定显示位置
-////		1 在LCD中间显示图片，当选择此模式的时候参数x,y无效。
-////x:图片左上角在LCD中的x轴位置(当参数mode为1时，此参数无效)
-////y:图片左上角在LCD中的y轴位置(当参数mode为1时，此参数无效)
-////member:  缩放比例的分子项
-////denom:缩放比例的分母项
-////返回值:0 显示正常,其他 失败
-//int displyjpeg(u8 *JPEGFileName,u8 mode,u32 x,u32 y,int member,int denom)
-//{
-//	u16 bread;
-//	char *jpegbuffer;
-//	char result;
-//	int XSize,YSize;
-//	GUI_JPEG_INFO JpegInfo;
-//	float Xflag,Yflag;
-//	
-//	#if SYSTEM_SUPPORT_OS
-//		CPU_SR_ALLOC();
-//	#endif
-
-//	result = f_open(&JPEGFile,(const TCHAR*)JPEGFileName,FA_READ);	//打开文件
-//	//文件打开错误或者文件大于JPEGMEMORYSIZE
-//	if((result != FR_OK) || (JPEGFile.obj.objsize>JPEGMEMORYSIZE)) 	
-//		return 1;
-//	
-//	jpegbuffer=mymalloc(SRAMEX,JPEGFile.obj.objsize);	//申请内存
-//	if(jpegbuffer == NULL) 
-//		return 2;
-//	
-//	#if SYSTEM_SUPPORT_OS
-//		OS_CRITICAL_ENTER();		//临界区
-//	#endif
-//		
-//	result = f_read(&JPEGFile,jpegbuffer,JPEGFile.obj.objsize,(UINT *)&bread); //读取数据
-//	if(result != FR_OK) 
-//		return 3;
-//	
-//	#if SYSTEM_SUPPORT_OS
-//		OS_CRITICAL_EXIT();	//退出临界区
-//	#endif
-//	
-//	GUI_JPEG_GetInfo(jpegbuffer,JPEGFile.obj.objsize,&JpegInfo); //获取JEGP图片信息
-//	XSize = JpegInfo.XSize;	//获取JPEG图片的X轴大小
-//	YSize = JpegInfo.YSize;	//获取JPEG图片的Y轴大小
-//	switch(mode)
-//	{
-//		case 0:	//在指定位置显示图片
-//			if((member == 1) && (denom == 1)) //无需缩放，直接绘制
-//			{
-//				GUI_JPEG_Draw(jpegbuffer,JPEGFile.obj.objsize,x,y);	//在指定位置显示JPEG图片
-//			}else //否则图片需要缩放
-//			{
-//				GUI_JPEG_DrawScaled(jpegbuffer,JPEGFile.obj.objsize,x,y,member,denom);
-//			}
-//			break;
-//		case 1:	//在LCD中间显示图片
-//			if((member == 1) && (denom == 1)) //无需缩放，直接绘制
-//			{
-//				//在LCD中间显示图片
-//				GUI_JPEG_Draw(jpegbuffer,JPEGFile.obj.objsize,(lcddev.width-XSize)/2-1,(lcddev.height-YSize)/2-1);
-//			}else //否则图片需要缩放
-//			{
-//				Xflag = (float)XSize*((float)member/(float)denom);
-//				Yflag = (float)YSize*((float)member/(float)denom);
-//				XSize = (lcddev.width-(int)Xflag)/2-1;
-//				YSize = (lcddev.height-(int)Yflag)/2-1;
-//				GUI_JPEG_DrawScaled(jpegbuffer,JPEGFile.obj.objsize,XSize,YSize,member,denom);
-//			}
-//			break;
-//	}
-//	f_close(&JPEGFile);			//关闭JPEGFile文件
-//	myfree(SRAMEX,jpegbuffer);	//释放内存
-//	return 0;
-//}
 
  /**
  ****************************************************************************************
@@ -356,11 +224,86 @@ void Display_Image_byName(IMAGE_Handle hObj,uint8_t *FileName)
         }
     }
 }
-void Display_Image_byIndex(uint8_t index)
+void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index)
 {
-
+	uint8_t *FileName;
+	uint8_t *temp;
+    pUSBH_WR_MSG USBImageFileCtrl;
     if(connect_usb == 1)//确定U盘在线
     {
-
+		FileName = (uint8_t *)DownloadPicture.file_name[index];
+		printf("display index = %d FileName=%s\r\n",index,FileName);
+		temp=(uint8_t *)strstr((char *)FileName,".");
+        if(!temp)
+        {
+            printf("file name err!\r\n");
+            return;
+        }   
+        temp++;
+        if((strcasecmp((char *)temp,(char *)"jpg") == 0) ||
+            (strcasecmp((char *)temp,(char *)"jpeg") == 0)
+        )
+        {
+            USBImageFileCtrl = load_image(FileName);
+			IMAGE_SetJPEG(hObj,USBImageFileCtrl->data,USBImageFileCtrl->bread);
+           
+        }
+        else if((strcasecmp((char *)temp,(char *)"bmp") == 0))
+        {
+            //USBImageFileCtrl = load_image(FileName);
+            
+        }
+        else
+        {
+            printf("not support file format!\r\n");
+        }
+		
     }
+}
+void Image_Display_Key(uint8_t key)
+{
+
+	if(DownloadPicture.file_num==1)//只有一张图片不需要切换显示，造成多次读写USB
+		return;
+	if(key)
+	{ 	
+		switch(key)
+		{				    
+			case KEY0_PRES:	//对比度设置
+			{
+				if(PictureIndex<DownloadPicture.file_num-1)
+					PictureIndex++;
+				else
+					PictureIndex=0;
+				
+				WM_InvalidateWindow(WM_Picture);//绘制图片
+			}
+			break;
+			case KEY1_PRES:	//执行一次自动对焦
+			{
+				printf("%s KEY1_PRES\r\n",__func__);
+			}
+			break;
+			case KEY2_PRES:
+			{
+				if(PictureIndex>0)
+					PictureIndex--;
+				else
+					PictureIndex=DownloadPicture.file_num-1;
+				
+				WM_InvalidateWindow(WM_Picture);//绘制图片
+			}
+			break;
+			case WKUP_PRES:
+			{
+				printf("%s WKUP_PRES\r\n",__func__);
+			}
+			break;
+			default:
+				break;
+			
+		}
+		
+	} 
+
 }

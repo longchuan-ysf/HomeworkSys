@@ -7,10 +7,10 @@
 #include "delay.h"
 uint8_t CurrentPage=0;//当前页面
 uint8_t PreviousPage=0;//之前页面
-void PageHnadle_main(PAGEHANDLE_PARA *para)	
+void PageHnadle_main(uint8_t PageIndex)	
 {
 	PreviousPage = CurrentPage;
-	CurrentPage = para->page;
+	CurrentPage =PageIndex;
 	printf("PreviousPage=%d CurrentPage=%d\r\n",PreviousPage,CurrentPage);
 	if(PreviousPage==CurrentPage)
 	{
@@ -21,11 +21,13 @@ void PageHnadle_main(PAGEHANDLE_PARA *para)
 	{
 		Close_Camera();//之前页面是拍照上传页面，切换页面要关闭摄像头
 	}
-	switch(para->page)
+	switch(PageIndex)
 	{
 		case PAGE_VIEW:
 		{
-			Display_Image_byName(para->hItem,"3:/download/test.jpg");
+			PictureIndex=0;
+			WM_InvalidateWindow(WM_Picture);//绘制图片
+			//Display_Image_byIndex(WM_Picture,PictureIndex);
 		}
 		break;
 		case PAGE_CAMERA:
