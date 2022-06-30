@@ -79,7 +79,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     780,    FRAMEWIN_CF_MOVEABLE                        },
   { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE1,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT1,        200,   730,    100,     16,   TEXT_CF_LEFT                                },
+ // { BUTTON_CreateIndirect,      "",      GUI_ID_BUTTON1,      180,  600,   120,     120,    0                                },
 };  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
@@ -176,10 +176,10 @@ static void _cbDialogPage2(WM_MESSAGE * pMsg) {
 	{
 		printf("init page 1\r\n");
 	
-		//初始化TEXT
-		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
-		TEXT_SetFont(hItem,&GUI_FontHZ16);
-		TEXT_SetText(hItem,"共   图片");
+		//初始化BUTTON
+//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
+//		BUTTON_SetBitmapEx(hItem,0,&bmcamera2,0,0);
+//		BUTTON_SetText(hItem, "");
 	}
 	break;
 	case WM_PAINT:	  

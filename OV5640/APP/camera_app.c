@@ -44,7 +44,7 @@ void jpeg_data_process(void)
 	u16 rlen;			//剩余数据长度
 	u32 *pbuf;
 	
-	curline=yoffset;	//行数复位
+	//行数复位
 	if(ovx_mode&0X01)	//只有在JPEG格式下,才需要做处理.
 	{
 		if(jpeg_data_ok==0)	//jpeg数据还未采集完?
@@ -79,6 +79,7 @@ void jpeg_data_process(void)
 	}
 	else
 	{
+		curline=0;
 		rgb565_data_len = 0;
 		rgb565_data_ok  = 1;
 		DCMI_Stop(); 			//停止DMA搬运
@@ -126,10 +127,35 @@ void rgblcd_dcmi_rx_callback(void)
 	rgb565_data_len+=i;
 	//printf("i=%d\r\n",i);
 	//LTDC_Color_Fill(0,curline,lcddev.width-1,curline,pbuf);//DM2D填充 
-	if(curline<lcddev.height)
+//	if(curline<lcddev.height)
 		curline++;
 
 }
+
+//RGB565测试
+//RGB数据直接显示在LCD上面
+void rgb565_test(void)
+{ 
+	u8 fac;
+	
+	ovx_mode=0;
+	if(lcdltdc.pwidth!=0)	//RGB屏
+	{
+		dcmi_rx_callback=rgblcd_dcmi_rx_callback;//RGB屏接收数据回调函数
+		DCMI_DMA_Init((u32)dcmi_line_buf[0],(u32)dcmi_line_buf[1],lcddev.width/2,DMA_MDATAALIGN_HALFWORD,DMA_MINC_ENABLE);//DCMI DMA配置  
+	}else					//MCU 屏
+	{
+		DCMI_DMA_Init((u32)&LCD->LCD_RAM,0,1,DMA_MDATAALIGN_HALFWORD,DMA_MINC_DISABLE);			//DCMI DMA配置,MCU屏,竖屏
+	}
+	OV5640_WR_Reg(0x3035,0X51);//降低输出帧率，否则可能抖动
+	yoffset = 50;
+	outputheight = 750;
+	curline=yoffset;		//行数复位
+	fac=800/outputheight;	//得到比例因子
+ 	OV5640_OutSize_Set((1280-fac*lcddev.width)/2,(800-fac*outputheight)/2,lcddev.width,outputheight); //1:1显示		
+	rgb565_data_ok=0;
+	//DCMI_Start(); 			//启动传输  
+} 
 
 //文件名自增（避免覆盖）
 //jpg组合成:形如"0:PHOTO/PIC13141.jpg"的文件名
@@ -137,14 +163,13 @@ void camera_new_pathname(u8 *pname)
 {	 
 
 	u16 index=0;
-	printf("%s   %d\r\n",__func__,__LINE__);
 	index=rand();
 	sprintf((char*)pname,"%s/%s/PIC%05d.jpg",SAVE_DISK,SAVE_FLODER,index);
 }  
 uint8_t OV5640_Save_photo(void)
 {
 	uint8_t * pbuf,*dir;;
-	uint8_t res,headok,fac;
+	uint8_t res,headok;
 	uint32_t i,jpgstart,jpglen;
 	u16 timeout;
     pUSBH_WR_MSG pMsgWR;
@@ -249,6 +274,7 @@ u8 ov5640_jpg_photo(void)
 	jpeg_data_ok=2;			//忽略本帧图片,启动下一帧采集 
 	while(jpeg_data_ok!=1);	//等待第二帧图片采集完,第二帧,才保存到SD卡去. 
 	DCMI_Stop(); 			//停止DMA搬运
+	//DCMI_Init();			//DCMI配置
 	ovx_mode=0; 
 	if(OV5640_Save_photo())
 	{
@@ -256,104 +282,11 @@ u8 ov5640_jpg_photo(void)
 	}
 
 	OV5640_RGB565_Mode();	//RGB565模式  
-	if(lcdltdc.pwidth!=0)	//RGB屏
-	{
-		dcmi_rx_callback=rgblcd_dcmi_rx_callback;//RGB屏接收数据回调函数
-		DCMI_DMA_Init((u32)dcmi_line_buf[0],(u32)dcmi_line_buf[1],lcddev.width/2,DMA_MDATAALIGN_HALFWORD,DMA_MINC_ENABLE);//DCMI DMA配置  
-	}else					//MCU 屏
-	{
-		DCMI_DMA_Init((u32)&LCD->LCD_RAM,0,1,DMA_MDATAALIGN_HALFWORD,DMA_MINC_DISABLE);			//DCMI DMA配置,MCU屏,竖屏
-	}
-//	if(lcddev.height>=800)  
-//	{
-//		yoffset=(lcddev.height-800)/2;
-//		outputheight=800;
-//		OV5640_WR_Reg(0x3035,0X51);//降低输出帧率，否则可能抖动
-//	}else 
-//	{
-//		yoffset=0;
-//		outputheight=lcddev.height;
-//	}
-	curline=yoffset;		//行数复位
-	fac=800/outputheight;	//得到比例因子
- 	OV5640_OutSize_Set((1280-fac*lcddev.width)/2,(800-fac*outputheight)/2,lcddev.width,outputheight); //1:1显示
+	rgb565_test();
 	return res;
 }  
-//RGB565测试
-//RGB数据直接显示在LCD上面
-void rgb565_test(void)
-{ 
-	u8 key;
-	u8 contrast=2,fac;
-	
-	ovx_mode=0;
-	if(lcdltdc.pwidth!=0)	//RGB屏
-	{
-		dcmi_rx_callback=rgblcd_dcmi_rx_callback;//RGB屏接收数据回调函数
-		DCMI_DMA_Init((u32)dcmi_line_buf[0],(u32)dcmi_line_buf[1],lcddev.width/2,DMA_MDATAALIGN_HALFWORD,DMA_MINC_ENABLE);//DCMI DMA配置  
-	}else					//MCU 屏
-	{
-		DCMI_DMA_Init((u32)&LCD->LCD_RAM,0,1,DMA_MDATAALIGN_HALFWORD,DMA_MINC_DISABLE);			//DCMI DMA配置,MCU屏,竖屏
-	}
-//	if(lcddev.height>=800)
-//	{
-//		yoffset=(lcddev.height-800)/2;
-//		outputheight=800; 
-	OV5640_WR_Reg(0x3035,0X51);//降低输出帧率，否则可能抖动
-//	}else 
-//	{
-//		yoffset=0;
-//		outputheight=lcddev.height;
-//	}
-	yoffset = 50;
-	outputheight = 750;
-	curline=yoffset;		//行数复位
-	fac=800/outputheight;	//得到比例因子
- 	OV5640_OutSize_Set((1280-fac*lcddev.width)/2,(800-fac*outputheight)/2,lcddev.width,outputheight); //1:1显示		
-	rgb565_data_ok=0;
-	DCMI_Start(); 			//启动传输
-//	LCD_Clear(BLACK);
 
-//	while(1)
-//	{ 
-//		key=KEY_Scan(0); 
-//		if(key)
-//		{ 
-//			if(key!=KEY1_PRES)
-//				DCMI_Stop(); //非KEY1按下,停止显示_调节对比度
-//			switch(key)
-//			{				    
-//				case KEY0_PRES:	//对比度设置
-//				{
-//					contrast++;
-//					if(contrast>6)contrast=0;
-//					OV5640_Contrast(contrast);
-//					printf("Contrast:%d",(signed char)contrast-3);
-//				}
-//				break;
-//				case KEY1_PRES:	//执行一次自动对焦
-//				{
-//					OV5640_Focus_Single();
-//				}
-//				break;
-//				case WKUP_PRES:
-//				{
-//					ov5640_jpg_photo();
-//				}
-//				break;
-//				default:
-//					break;
-//				
-//			}
-//			if(key!=KEY1_PRES)	//非KEY1按下
-//			{
-//				delay_ms(800); 
-//				DCMI_Start();	//重新开始传输
-//			}
-//		} 
-//		delay_ms(10);		
-//	}    
-} 
+
 
 void camera_app_init(void)
 {
@@ -378,10 +311,6 @@ void camera_app_init(void)
 	OV5640_Sharpness(33);	//自动锐度
 	OV5640_Focus_Constant();//启动持续对焦
 	DCMI_Init();			//DCMI配置
-// 	while(1)
-//    {      
-//		rgb565_test(); 
-//	}	
 }
 void Close_Camera(void)
 {
@@ -389,8 +318,47 @@ void Close_Camera(void)
 }
 void Start_Camera(void)
 {
+	ovx_mode=0;
 	rgb565_data_len = 0;
 	rgb565_data_ok  = 0;
 	DCMI_Start(); 			//启动传输
 }
 
+void camera_key_handle(uint8_t key)
+{
+		if(key)
+		{ 	
+			switch(key)
+			{				    
+				case KEY0_PRES:	//对比度设置
+				{
+					OV5640_Focus_Single();
+				}
+				break;
+				case KEY1_PRES:	//执行一次自动对焦
+				{
+					if(!connect_usb)
+						return;
+					rgb565_data_ok=0;//防止接下来刷屏
+					DCMI_Stop(); //非KEY1按下,停止显示_调节对比度
+					ov5640_jpg_photo();
+					Start_Camera();	//重新开始传输
+				}
+				break;
+				case KEY2_PRES:
+				{
+					printf("KEY2_PRES\r\n");
+				}
+				break;
+				case WKUP_PRES:
+				{
+					printf("WKUP_PRES\r\n");
+				}
+				break;
+				default:
+					break;
+				
+			}
+			
+		} 
+}

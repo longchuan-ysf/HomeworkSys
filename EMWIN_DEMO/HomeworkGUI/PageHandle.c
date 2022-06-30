@@ -31,15 +31,7 @@ void PageHnadle_main(PAGEHANDLE_PARA *para)
 		case PAGE_CAMERA:
 		{
 			rgb565_test();
-//			while(1)
-//			{
-//				if(rgb565_data_ok)
-//				{
-//					IMAGE_SetBitmap(ImageCamera,&bm2_c);
-//					break;
-//				}
-//				delay_ms(10);
-//			}
+			Start_Camera();
 		}
 		case PAGE_SYS:
 		{
@@ -49,3 +41,4 @@ void PageHnadle_main(PAGEHANDLE_PARA *para)
 	
 	}
 }
+

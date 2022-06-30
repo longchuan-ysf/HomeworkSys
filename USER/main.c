@@ -292,7 +292,7 @@ void emwindemo_task(void *p_arg)
 	CreateFramewin();
 	while(1)
 	{
-       GUI_Delay(1);
+       GUI_Delay(5);
 	   //OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//—” ±10ms
 	}
 }
@@ -309,26 +309,13 @@ void key_task(void *pdata)
 	while(1)
 	{
 //		MessageRxHandle();
-		key = KEY_Scan(0);
-//		switch(key)
-//		{
-//			case KEY0_PRES:
-//			{
-//				test_http_post();				
-//			}
-//			break;
-//			case KEY1_PRES:
-//			{
-//				test_http_get();
-//			}
-//			break;
-//		}
 		if(CurrentPage==PAGE_CAMERA)
-		{
+		{			
+			key = KEY_Scan(0);
+			camera_key_handle(key);
 			if(rgb565_data_ok)
 			{
 				rgb565_data_ok=0;
-//				printf("WM_InvalidateWindow(WM_Camera)\r\n");
 				WM_InvalidateWindow(WM_Camera);
 				
 			}
@@ -337,7 +324,7 @@ void key_task(void *pdata)
 		{
 		
 		}
-		OSTimeDlyHMSM(0,0,0,1,OS_OPT_TIME_PERIODIC,&err);//—” ±1ms
+		OSTimeDlyHMSM(0,0,0,5,OS_OPT_TIME_PERIODIC,&err);//—” ±1ms
 
 	}
 }

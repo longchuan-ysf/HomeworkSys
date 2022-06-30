@@ -9,6 +9,7 @@ extern u16 *rgb565_data_buff;					//rgb565数据数据暂存区
 extern u8 rgb565_data_ok;
 extern void camera_app_init(void);
 extern u8 ov5640_jpg_photo(void);
+extern void camera_key_handle(uint8_t key);
 extern void rgb565_test(void);
 extern void Close_Camera(void);
 extern void Start_Camera(void);
