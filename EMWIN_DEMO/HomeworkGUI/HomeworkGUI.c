@@ -28,7 +28,6 @@
 #include "PageHandle.h"
 #include "jpegdisplay.h"
 #include "camera_app.h"
-#include "malloc.h"
 /*********************************************************************
 *
 *       Defines
@@ -39,8 +38,7 @@
 #define ID_MULTIPAGE_0    (GUI_ID_USER + 0x01)
 
 GUI_BITMAP buttonbmp_tab[2];
-WM_HWIN WM_Camera;//显示照相机数据
-WM_HWIN WM_Picture;//显示照片
+WM_HWIN WM_Camera;
 // USER START (Optionally insert additional defines)
 // USER END
 
@@ -75,10 +73,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage1[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     780,    FRAMEWIN_CF_MOVEABLE                        },
   { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE0,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
- 
- // { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON1,    170,  690,    50,     60,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        170,  730,    120,     16,   TEXT_CF_LEFT                                },
-  //{ BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON2,      170+50+40,  690,    50,     60,     0},
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        200,   730,    100,     16,   TEXT_CF_LEFT                                },
 };  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
@@ -117,7 +112,7 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 	WM_HWIN hDlg;
 	int     NCode;
 	int     Id;
-	char   *msg;
+
 	hDlg = pMsg->hWin;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:	  
@@ -127,33 +122,9 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 		//初始化TEXT
 		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
-		TEXT_SetTextColor(hItem,GUI_RED);
-		TEXT_SetText(hItem,"第  张/共  图片");
-		
-		
-//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
-//		BUTTON_SetBitmapEx(hItem,0,&bmlift,0,0);
-//		BUTTON_SetText(hItem, "");
-//		
-//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON2);
-//		BUTTON_SetBitmapEx(hItem,0,&bmright,0,0);
-//		BUTTON_SetText(hItem, "");
+		TEXT_SetText(hItem,"共   图片");
 	}
 	break;
-	case WM_PAINT:	  
-	{
-		msg=mymalloc(SRAMIN,32);
-		
-		Display_Image_byIndex(WM_Picture,PictureIndex);
-		
-		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
-		TEXT_SetFont(hItem,&GUI_FontHZ16);
-		TEXT_SetTextColor(hItem,GUI_RED);
-		sprintf(msg,"第 %d 张/共 %d 张图",PictureIndex+1,DownloadPicture.file_num);
-		TEXT_SetText(hItem,msg);
-		
-		myfree(SRAMIN,msg);
-	}
 	case WM_NOTIFY_PARENT:
 	{	
 		Id    = WM_GetId(pMsg->hWinSrc);
@@ -339,7 +310,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		//
 		// 初始化框架
 		//
-		hItem = pMsg->hWin;//hItem为主对话框
+		hItem = pMsg->hWin;
 		FRAMEWIN_SetText(hItem, "作业查看提交系统");
 		FRAMEWIN_SetTitleHeight(hItem, 25);
 		FRAMEWIN_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
@@ -347,7 +318,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		//
 		// 初始化多页显示工具
 		//
-		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);//hItem为多页控件
+		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);
 		
 		//第一页
 		hDialog = GUI_CreateDialogBox(_aDialogCreatePage1, GUI_COUNTOF(_aDialogCreatePage1), _cbDialogPage1, WM_UNATTACHED, 0, 0);
@@ -369,7 +340,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		MULTIPAGE_SetTabWidth(hItem,100,2); //not supported for v5.24
 		MULTIPAGE_SetFont(hItem,&GUI_FontHZ16);
 		
-		WM_Picture  = WM_GetDialogItem(hItem, GUI_ID_IMAGE0);
 		WM_Camera  = WM_GetDialogItem(hItem, GUI_ID_IMAGE1);
 		// USER START (Optionally insert additional code for further widget initialization)
 		// USER END
@@ -400,7 +370,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		  {
 				// 此时的hItem是  Multipage
 				PageIndex=MULTIPAGE_GetSelection (hItem);
-				PageHnadle_main(PageIndex);
+				// 此时的hItem是  IMAGE0
+				hItem = WM_GetDialogItem(hItem, GUI_ID_IMAGE0);
+				para.page= PageIndex;
+				para.hItem = hItem;
+
+				PageHnadle_main(&para);
 			}
 			break;
 		  // USER START (Optionally insert additional code for further notification handling)

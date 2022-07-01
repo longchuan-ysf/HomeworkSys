@@ -326,39 +326,39 @@ void Start_Camera(void)
 
 void camera_key_handle(uint8_t key)
 {
-	if(key)
-	{ 	
-		switch(key)
-		{				    
-			case KEY0_PRES:	//对比度设置
-			{
-				OV5640_Focus_Single();
-			}
-			break;
-			case KEY1_PRES:	//执行一次自动对焦
-			{
-				if(!connect_usb)
-					return;
-				rgb565_data_ok=0;//防止接下来刷屏
-				DCMI_Stop(); //非KEY1按下,停止显示_调节对比度
-				ov5640_jpg_photo();
-				Start_Camera();	//重新开始传输
-			}
-			break;
-			case KEY2_PRES:
-			{
-				printf("KEY2_PRES\r\n");
-			}
-			break;
-			case WKUP_PRES:
-			{
-				printf("WKUP_PRES\r\n");
-			}
-			break;
-			default:
+		if(key)
+		{ 	
+			switch(key)
+			{				    
+				case KEY0_PRES:	//对比度设置
+				{
+					OV5640_Focus_Single();
+				}
 				break;
+				case KEY1_PRES:	//执行一次自动对焦
+				{
+					if(!connect_usb)
+						return;
+					rgb565_data_ok=0;//防止接下来刷屏
+					DCMI_Stop(); //非KEY1按下,停止显示_调节对比度
+					ov5640_jpg_photo();
+					Start_Camera();	//重新开始传输
+				}
+				break;
+				case KEY2_PRES:
+				{
+					printf("KEY2_PRES\r\n");
+				}
+				break;
+				case WKUP_PRES:
+				{
+					printf("WKUP_PRES\r\n");
+				}
+				break;
+				default:
+					break;
+				
+			}
 			
-		}
-		
-	} 
+		} 
 }

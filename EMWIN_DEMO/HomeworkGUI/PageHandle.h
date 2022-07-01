@@ -23,6 +23,6 @@ typedef struct
 }PAGEHANDLE_PARA;
 extern uint8_t CurrentPage;//当前页面
 extern uint8_t PreviousPage;//之前页面
-extern void PageHnadle_main(uint8_t PageIndex);
+extern void PageHnadle_main(PAGEHANDLE_PARA *para);
 
 #endif
