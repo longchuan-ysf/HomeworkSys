@@ -55,7 +55,7 @@ void emwindemo_task(void *p_arg);
 //设置任务优先级
 #define KEY_TASK_PRIO 				6
 //任务堆栈大小
-#define KEY_STK_SIZE				1024
+#define KEY_STK_SIZE				256
 //任务控制块
 OS_TCB KeyTaskTCB;
 //任务堆栈
@@ -302,12 +302,13 @@ extern void test_post(void);
 void key_task(void *pdata)
 {
 	OS_ERR err;
-
+//	atk_8266_test();
+//	BackGroundInit();
 	camera_app_init();
 	u8 key;
 	while(1)
 	{
-
+//		MessageRxHandle();
 		if(CurrentPage==PAGE_CAMERA)
 		{			
 			key = KEY_Scan(0);
@@ -377,17 +378,15 @@ void led0_task(void *p_arg)
 {
 	OS_ERR err;
 	u8 time=0;	
-//	atk_8266_test();
-//	BackGroundInit();
 	while(1)
 	{
-//		MessageRxHandle();
+		
 		LED0_Toggle;
 		time++;
 		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//延时500ms
 		if(time == 10)//5秒输出一次内存使用率
 		{
-			//Memory_Usage();
+			Memory_Usage();
 			time = 0;
 		}
 	}

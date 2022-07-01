@@ -11,12 +11,12 @@ typedef struct
 	uint32_t file_num;//有效的文件名个数
 	uint8_t ScanResult;//扫描结果
 }File_Scan;
+
 extern uint8_t PictureIndex;
-extern File_Scan DownloadPicture;//
+extern File_Scan DownloadPicture;//目录扫描结果存放
 
 extern void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index);
 extern void Image_Display_Key(uint8_t key);
 extern void Display_Image_byName(IMAGE_Handle hObj,uint8_t *FileName);
 #endif
-
 

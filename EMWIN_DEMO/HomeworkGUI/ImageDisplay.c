@@ -136,7 +136,6 @@ void test_ff(char* scan_dir,char* choose_file)
 
 
 
-
  /**
  ****************************************************************************************
  @brief:     load_image 加载文件到RAM中
@@ -231,8 +230,7 @@ void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index)
 	uint8_t *FileName;
 	uint8_t *temp;
     pUSBH_WR_MSG USBImageFileCtrl;
-
-    if(connect_usb == 1)//???U??????
+    if(connect_usb == 1)//确定U盘在线
     {
 		FileName = (uint8_t *)DownloadPicture.file_name[index];
 		printf("display index = %d FileName=%s\r\n",index,FileName);
@@ -250,6 +248,7 @@ void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index)
             USBImageFileCtrl = load_image(FileName);
 			IMAGE_SetJPEG(hObj,USBImageFileCtrl->data,USBImageFileCtrl->bread);
 			USBH_WR_MsgFree(USBImageFileCtrl);
+           
         }
         else if((strcasecmp((char *)temp,(char *)"bmp") == 0))
         {
@@ -260,28 +259,29 @@ void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index)
         {
             printf("not support file format!\r\n");
         }
-	}
+		
+    }
 }
 void Image_Display_Key(uint8_t key)
 {
 
-	if(DownloadPicture.file_num==1)//??????????????л??????????ζ?дUSB
+	if(DownloadPicture.file_num==1)//只有一张图片不需要切换显示，造成多次读写USB
 		return;
 	if(key)
 	{ 	
 		switch(key)
 		{				    
-			case KEY0_PRES:	//????????
+			case KEY0_PRES:	//对比度设置
 			{
 				if(PictureIndex<DownloadPicture.file_num-1)
 					PictureIndex++;
 				else
 					PictureIndex=0;
 				
-				WM_InvalidateWindow(WM_Picture);//??????
+				WM_InvalidateWindow(WM_Picture);//绘制图片
 			}
 			break;
-			case KEY1_PRES:	
+			case KEY1_PRES:	//执行一次自动对焦
 			{
 				printf("%s KEY1_PRES\r\n",__func__);
 			}
@@ -293,7 +293,7 @@ void Image_Display_Key(uint8_t key)
 				else
 					PictureIndex=DownloadPicture.file_num-1;
 				
-				WM_InvalidateWindow(WM_Picture);//??????
+				WM_InvalidateWindow(WM_Picture);//绘制图片
 			}
 			break;
 			case WKUP_PRES:

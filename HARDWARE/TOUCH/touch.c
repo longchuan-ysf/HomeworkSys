@@ -217,7 +217,9 @@ u8 TP_Scan(u8 tp)
   }
   return tp_dev.sta&TP_PRES_DOWN;//返回当前的触屏状态
 }  
-
+//////////////////////////////////////////////////////////////////////////	 
+//保存在EEPROM里面的地址区间基址,占用13个字节(RANGE:SAVE_ADDR_BASE~SAVE_ADDR_BASE+12)
+#define SAVE_ADDR_BASE 40
 //保存校准参数										    
 void TP_Save_Adjdata(void)
 {

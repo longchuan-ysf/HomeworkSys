@@ -39,8 +39,8 @@
 #define ID_MULTIPAGE_0    (GUI_ID_USER + 0x01)
 
 GUI_BITMAP buttonbmp_tab[2];
-WM_HWIN WM_Camera;
-WM_HWIN WM_Picture;
+WM_HWIN WM_Camera;//显示照相机数据
+WM_HWIN WM_Picture;//显示照片
 // USER START (Optionally insert additional defines)
 // USER END
 
@@ -75,7 +75,10 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage1[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     780,    FRAMEWIN_CF_MOVEABLE                        },
   { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE0,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        170,   730,  200,     16,   TEXT_CF_LEFT                                },
+ 
+ // { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON1,    170,  690,    50,     60,     0},
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        170,  730,    120,     16,   TEXT_CF_LEFT                                },
+  //{ BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON2,      170+50+40,  690,    50,     60,     0},
 };  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
@@ -87,7 +90,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     700,    FRAMEWIN_CF_MOVEABLE },
   { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      180,  10,    110,     40,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     20,     TEXT_CF_LEFT },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     1,     TEXT_CF_LEFT },
   { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   60,    200,     500,    0 },
 };
 
@@ -124,7 +127,17 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 		//初始化TEXT
 		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
-		TEXT_SetText(hItem,"共   图片");
+		TEXT_SetTextColor(hItem,GUI_RED);
+		TEXT_SetText(hItem,"第  张/共  图片");
+		
+		
+//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
+//		BUTTON_SetBitmapEx(hItem,0,&bmlift,0,0);
+//		BUTTON_SetText(hItem, "");
+//		
+//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON2);
+//		BUTTON_SetBitmapEx(hItem,0,&bmright,0,0);
+//		BUTTON_SetText(hItem, "");
 	}
 	break;
 	case WM_PAINT:	  
@@ -136,7 +149,7 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
 		TEXT_SetTextColor(hItem,GUI_RED);
-		sprintf(msg,"第 %d 张/共 %d 张图片",PictureIndex+1,DownloadPicture.file_num);
+		sprintf(msg,"第 %d 张/共 %d 张图",PictureIndex+1,DownloadPicture.file_num);
 		TEXT_SetText(hItem,msg);
 		
 		myfree(SRAMIN,msg);
@@ -258,7 +271,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	case WM_INIT_DIALOG:	  
 	{
 		//初始化TEXT
-		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT2);
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
 		TEXT_SetText(hItem,"无线局域网");
 
@@ -318,6 +331,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 	int     NCode;
 	int     Id;
 	char PageIndex;
+	PAGEHANDLE_PARA para;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:
 	{
@@ -325,7 +339,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		//
 		// 初始化框架
 		//
-		hItem = pMsg->hWin;
+		hItem = pMsg->hWin;//hItem为主对话框
 		FRAMEWIN_SetText(hItem, "作业查看提交系统");
 		FRAMEWIN_SetTitleHeight(hItem, 25);
 		FRAMEWIN_SetTextAlign(hItem, GUI_TA_HCENTER | GUI_TA_VCENTER);
@@ -333,7 +347,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		//
 		// 初始化多页显示工具
 		//
-		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);
+		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);//hItem为多页控件
 		
 		//第一页
 		hDialog = GUI_CreateDialogBox(_aDialogCreatePage1, GUI_COUNTOF(_aDialogCreatePage1), _cbDialogPage1, WM_UNATTACHED, 0, 0);
@@ -386,8 +400,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		  {
 				// 此时的hItem是  Multipage
 				PageIndex=MULTIPAGE_GetSelection (hItem);
-
-
 				PageHnadle_main(PageIndex);
 			}
 			break;

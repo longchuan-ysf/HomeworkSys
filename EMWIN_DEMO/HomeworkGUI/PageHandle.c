@@ -26,10 +26,10 @@ void PageHnadle_main(uint8_t PageIndex)
 		case PAGE_VIEW:
 		{
 			PictureIndex=0;
-			WM_InvalidateWindow(WM_Picture);//??????
-			Display_Image_byIndex(WM_Picture,PictureIndex);
-			//Display_Image_byName(para->hItem,"3:/download/test.jpg");
-		};
+			WM_InvalidateWindow(WM_Picture);//ªÊ÷∆Õº∆¨
+			//Display_Image_byIndex(WM_Picture,PictureIndex);
+		}
+		break;
 		case PAGE_CAMERA:
 		{
 			rgb565_test();
