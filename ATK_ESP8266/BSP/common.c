@@ -219,16 +219,16 @@ void atk_8266_get_wanip(u8* ipbuf)
 void atk_8266_test(void)
 {
 	atk_8266_init();
-	printf("ATK-ESP8266 WIFI模块测试\r\n"); 
-	while(atk_8266_send_cmd("AT","OK",100))//检查WIFI模块是否在线
-	{
-		atk_8266_quit_trans();//退出透传
-		atk_8266_send_cmd("AT+CIPMODE=0","OK",200);  //关闭透传模式	
-		printf("未检测到模块!!!\r\n");
-		delay_ms(800);
-		printf("尝试连接模块...\r\n"); 
-	} 
-	while(atk_8266_send_cmd("ATE0","OK",200));//关闭回显
+//	printf("ATK-ESP8266 WIFI模块测试\r\n"); 
+//	while(atk_8266_send_cmd("AT","OK",100))//检查WIFI模块是否在线
+//	{
+//		atk_8266_quit_trans();//退出透传
+//		atk_8266_send_cmd("AT+CIPMODE=0","OK",200);  //关闭透传模式	
+//		printf("未检测到模块!!!\r\n");
+//		delay_ms(800);
+//		printf("尝试连接模块...\r\n"); 
+//	} 
+//	while(atk_8266_send_cmd("ATE0","OK",200));//关闭回显
 	
 	//atk_8266_wifista_test();	
 }

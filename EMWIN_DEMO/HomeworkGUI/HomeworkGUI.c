@@ -28,6 +28,7 @@
 #include "PageHandle.h"
 #include "jpegdisplay.h"
 #include "camera_app.h"
+#include "malloc.h"
 /*********************************************************************
 *
 *       Defines
@@ -39,6 +40,7 @@
 
 GUI_BITMAP buttonbmp_tab[2];
 WM_HWIN WM_Camera;
+WM_HWIN WM_Picture;
 // USER START (Optionally insert additional defines)
 // USER END
 
@@ -73,7 +75,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage1[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     780,    FRAMEWIN_CF_MOVEABLE                        },
   { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE0,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        200,   730,    100,     16,   TEXT_CF_LEFT                                },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        170,   730,  200,     16,   TEXT_CF_LEFT                                },
 };  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags                      Para       NumExtraBytes
@@ -85,7 +87,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     700,    FRAMEWIN_CF_MOVEABLE },
   { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      180,  10,    110,     40,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     1,     TEXT_CF_LEFT },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     20,     TEXT_CF_LEFT },
   { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   60,    200,     500,    0 },
 };
 
@@ -112,7 +114,7 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 	WM_HWIN hDlg;
 	int     NCode;
 	int     Id;
-
+	char   *msg;
 	hDlg = pMsg->hWin;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:	  
@@ -125,6 +127,20 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 		TEXT_SetText(hItem,"共   图片");
 	}
 	break;
+	case WM_PAINT:	  
+	{
+		msg=mymalloc(SRAMIN,32);
+		
+		Display_Image_byIndex(WM_Picture,PictureIndex);
+		
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
+		TEXT_SetFont(hItem,&GUI_FontHZ16);
+		TEXT_SetTextColor(hItem,GUI_RED);
+		sprintf(msg,"第 %d 张/共 %d 张图片",PictureIndex+1,DownloadPicture.file_num);
+		TEXT_SetText(hItem,msg);
+		
+		myfree(SRAMIN,msg);
+	}
 	case WM_NOTIFY_PARENT:
 	{	
 		Id    = WM_GetId(pMsg->hWinSrc);
@@ -242,7 +258,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	case WM_INIT_DIALOG:	  
 	{
 		//初始化TEXT
-		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT2);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
 		TEXT_SetText(hItem,"无线局域网");
 
@@ -302,7 +318,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 	int     NCode;
 	int     Id;
 	char PageIndex;
-	PAGEHANDLE_PARA para;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:
 	{
@@ -340,6 +355,7 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		MULTIPAGE_SetTabWidth(hItem,100,2); //not supported for v5.24
 		MULTIPAGE_SetFont(hItem,&GUI_FontHZ16);
 		
+		WM_Picture  = WM_GetDialogItem(hItem, GUI_ID_IMAGE0);
 		WM_Camera  = WM_GetDialogItem(hItem, GUI_ID_IMAGE1);
 		// USER START (Optionally insert additional code for further widget initialization)
 		// USER END
@@ -370,12 +386,9 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		  {
 				// 此时的hItem是  Multipage
 				PageIndex=MULTIPAGE_GetSelection (hItem);
-				// 此时的hItem是  IMAGE0
-				hItem = WM_GetDialogItem(hItem, GUI_ID_IMAGE0);
-				para.page= PageIndex;
-				para.hItem = hItem;
 
-				PageHnadle_main(&para);
+
+				PageHnadle_main(PageIndex);
 			}
 			break;
 		  // USER START (Optionally insert additional code for further notification handling)

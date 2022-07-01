@@ -24,6 +24,10 @@
 #define AT24C64	    8191
 #define AT24C128	16383
 #define AT24C256	32767  
+//////////////////////////////////////////////////////////////////////////	 
+//保存在EEPROM里面的地址区间基址,占用13个字节(RANGE:SAVE_ADDR_BASE~SAVE_ADDR_BASE+12)
+#define SAVE_ADDR_BASE 40 //触摸屏参数存放位置
+
 //STM32 F746开发板使用的是24c02，所以定义EE_TYPE为AT24C02
 #define EE_TYPE AT24C02
 					  
