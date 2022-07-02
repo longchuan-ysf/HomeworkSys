@@ -1,5 +1,6 @@
 #include "common.h"
 
+#define PATH_NETCONFIG "3:/config.txt"
 WiFi_config WiFiConfig;
 /*************************************************
 function    :用默认值初始化WiFi配置参数
@@ -8,9 +9,8 @@ output		:NULL
 return		:NULL
 description :
 **************************************************/
-void atk_8266_init(void)
+void atk_8266_default_config(void)
 {
-	memset(&WiFiConfig,0,sizeof(WiFiConfig));
 	//端口
 	u8 ServerPort[] = "80";
 	WiFiConfig.port = (u8 *)mymalloc(SRAMIN,sizeof(ServerPort));
@@ -18,6 +18,7 @@ void atk_8266_init(void)
 	
 	//服务器IP
 	u8 ServerIP[] = "192.168.86.101";
+	WiFiConfig.severip = (u8 *)mymalloc(SRAMIN,sizeof(ServerIP));
 	mymemcpy(WiFiConfig.severip,ServerIP,sizeof(ServerIP));
 	
 	//WiFi名称
@@ -34,7 +35,116 @@ void atk_8266_init(void)
 	u8 Encryption[] = "WPA2";
 	WiFiConfig.wifista_encryption = (u8 *)mymalloc(SRAMIN,sizeof(Encryption));
 	mymemcpy(WiFiConfig.wifista_encryption,Encryption,sizeof(Encryption));
+}
+/*************************************************
+function    :从配置字符串中解码配置值
+input       :ConfigStr 配置字符串
+			 ConfigName 配置名称
+			 Config  配置值
+output		:NULL
+return		:
+description :配置一定要是这样
+			 Name1 : Value1\r\n
+			 Name2 : Value2\r\n
+**************************************************/
+void Decode_config(uint8_t *ConfigStr,uint8_t *ConfigName,uint8_t *Config)
+{
+	uint8_t *start,*end;
 	
+	start = (uint8_t *)strstr((char *)ConfigStr,(char *)ConfigName);
+	end = (uint8_t *)strstr((char *)start,"\r\n");
+	start+=strlen((char *)ConfigName);
+	
+	mymemcpy(Config,start,end-start);
+}
+/*************************************************
+function    :初始化WiFi配置参数
+input       :NULL
+output		:NULL
+return		:NULL
+description :
+**************************************************/
+void atk_8266_init(void)
+{
+	FIL *NetConfig;
+	uint32_t br;
+	uint8_t *data,*temp;
+	uint8_t res;
+	NetConfig=mymalloc(SRAMIN,sizeof(FIL));
+	memset(&WiFiConfig,0,sizeof(WiFiConfig));
+	res = f_open(NetConfig,PATH_NETCONFIG,FA_READ);
+	if(res)
+	{
+		printf("open config file err, use default config\r\n");
+		atk_8266_default_config();
+		return;
+	}
+	data = mymalloc(SRAMIN, NetConfig->obj.objsize+1);
+	if(!data)
+	{
+		printf("malloc data err!\r\n");
+		atk_8266_default_config();
+		f_close(NetConfig);
+		return;
+	}
+	mymemset(data,0,NetConfig->obj.objsize+1);
+	
+	temp =  mymalloc(SRAMIN, 64);
+	if(!temp)
+	{
+		printf("malloc temp err!\r\n");
+		atk_8266_default_config();
+		f_close(NetConfig);
+		myfree(SRAMIN,temp);
+		return;
+	}
+	
+	
+	res = f_read(NetConfig,data,NetConfig->obj.objsize,&br);
+	if(res)
+	{
+		printf("malloc err!\r\n");
+		atk_8266_default_config();
+		f_close(NetConfig);
+		myfree(SRAMIN,data);
+		myfree(SRAMIN,temp);
+		return;
+	}
+
+	mymemset(temp,0,64);
+	Decode_config(data,(uint8_t *)"SSID : ",temp);
+	WiFiConfig.wifista_ssid = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
+	strcpy((char *)WiFiConfig.wifista_ssid,(char *)temp);
+	printf("ssid = %s\r\n",WiFiConfig.wifista_ssid);
+	
+	mymemset(temp,0,64);
+	Decode_config(data,(uint8_t *)"Password : ",temp);
+	WiFiConfig.wifista_password = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
+	strcpy((char *)WiFiConfig.wifista_password,(char *)temp);
+	printf("password = %s\r\n",WiFiConfig.wifista_password);
+	
+	mymemset(temp,0,64);
+	Decode_config(data,(uint8_t *)"Encryption : ",temp);
+	WiFiConfig.wifista_encryption = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
+	strcpy((char *)WiFiConfig.wifista_encryption,(char *)temp);
+	printf("encryption = %s\r\n",WiFiConfig.wifista_encryption);
+	
+	mymemset(temp,0,64);
+	Decode_config(data,(uint8_t *)"ServerPort : ",temp);
+	WiFiConfig.port = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
+	strcpy((char *)WiFiConfig.port,(char *)temp);
+	printf("port = %s\r\n",WiFiConfig.port);
+	
+	mymemset(temp,0,64);
+	Decode_config(data,(uint8_t *)"ServerIP : ",temp);
+	WiFiConfig.severip = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
+	strcpy((char *)WiFiConfig.severip,(char *)temp);
+	printf("severip = %s\r\n",WiFiConfig.severip);
+	
+	f_close(NetConfig);
+	myfree(SRAMIN,data);
+	myfree(SRAMIN,temp);
+//	
 	//其他参数暂时不关心
 	
 }
@@ -218,8 +328,7 @@ void atk_8266_get_wanip(u8* ipbuf)
 //ATK-ESP8266模块测试检测WiFi模块
 void atk_8266_test(void)
 {
-	atk_8266_init();
-	printf("ATK-ESP8266 WIFI模块测试\r\n"); 
+ 
 	while(atk_8266_send_cmd("AT","OK",100))//检查WIFI模块是否在线
 	{
 		atk_8266_quit_trans();//退出透传
@@ -233,7 +342,12 @@ void atk_8266_test(void)
 	//atk_8266_wifista_test();	
 }
 
-
+void atk_8266_scan(void)
+{
+	
+	while(atk_8266_send_cmd("AT+CWLAP","OK",200));
+	
+}
 
 
 

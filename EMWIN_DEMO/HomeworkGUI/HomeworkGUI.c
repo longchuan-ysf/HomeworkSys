@@ -29,6 +29,7 @@
 #include "jpegdisplay.h"
 #include "camera_app.h"
 #include "malloc.h"
+#include "common.h"
 /*********************************************************************
 *
 *       Defines
@@ -90,7 +91,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     700,    FRAMEWIN_CF_MOVEABLE },
   { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      180,  10,    110,     40,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     1,     TEXT_CF_LEFT },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     20,     TEXT_CF_LEFT },
   { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   60,    200,     500,    0 },
 };
 
@@ -271,7 +272,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	case WM_INIT_DIALOG:	  
 	{
 		//初始化TEXT
-		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT2);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
 		TEXT_SetText(hItem,"无线局域网");
 
@@ -304,6 +305,14 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 					{
 						ButtonFlag=~ButtonFlag;
 						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);
+						if(ButtonFlag)
+						{
+							atk_8266_scan();
+						}
+						else
+						{
+						
+						}
 					}						
 					break;	
 				}

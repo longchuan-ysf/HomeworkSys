@@ -67,7 +67,7 @@ void key_task(void *p_arg);
 //设置任务优先级
 #define LED0_TASK_PRIO 				7
 //任务堆栈大小
-#define LED0_STK_SIZE				256
+#define LED0_STK_SIZE				512
 //任务控制块
 OS_TCB Led0TaskTCB;
 //任务堆栈
@@ -377,7 +377,12 @@ void Memory_Usage()
 void led0_task(void *p_arg)
 {
 	OS_ERR err;
-	u8 time=0;	
+	u8 time=0;
+	while(!connect_usb)
+	{
+		delay_ms(500);
+	}
+	atk_8266_init();
 	while(1)
 	{
 		
@@ -386,7 +391,7 @@ void led0_task(void *p_arg)
 		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//延时500ms
 		if(time == 10)//5秒输出一次内存使用率
 		{
-			Memory_Usage();
+			//Memory_Usage();
 			time = 0;
 		}
 	}

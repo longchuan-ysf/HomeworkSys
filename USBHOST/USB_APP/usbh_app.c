@@ -153,7 +153,7 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		if((res != FR_OK)) 	
 		{
 			pUSBwrMsg->result  = res;
-			printf("open failed,result = %d\r\n",pUSBwrMsg->result);
+			printf("read open %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
 			return ;
 		}
 		if(pUSBwrMsg->length == RD_ALL_DATA)
@@ -164,12 +164,14 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		{
 			RWLength = pUSBwrMsg->length;
 		}
+		printf("RWLength = %d\r\n",RWLength);
 		//申请内存已保存读取数据
 		pUSBwrMsg->data = mymalloc(SRAMEX,RWLength);
 		if(!pUSBwrMsg->data)
 		{
 			printf("malloc memory for read err!\r\n");
 			pUSBwrMsg->result = FR_INVALID_PARAMETER;
+			f_close(&File);	//关闭文件
 			return;
 		}
 		pUSBwrMsg->WRbufCtrl = WR_BUFF_USB;
@@ -177,7 +179,8 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		if((res != FR_OK)) 	
 		{
 			pUSBwrMsg->result  = res;
-			printf("read failed,result = %d\r\n",pUSBwrMsg->result);			
+			printf("read %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);	
+			f_close(&File);	//关闭文件			
 			return ;
 		}
 		pUSBwrMsg->bread = bread;
@@ -185,7 +188,7 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		if(res != FR_OK) 	
 		{
 			pUSBwrMsg->result  = res;
-			printf("close failed,result = %d\r\n",pUSBwrMsg->result);
+			printf("close %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
 			return ;
 		}	
 		pUSBwrMsg->result  = res;
@@ -205,7 +208,7 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		if(res != FR_OK)	
 		{
 			pUSBwrMsg->result  = res;
-			printf("open failed,result = %d\r\n",pUSBwrMsg->result);
+			printf("write open %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
 			return ;
 		}	
 
@@ -213,7 +216,8 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		if(res != FR_OK)	
 		{
 			pUSBwrMsg->result  = res;
-			printf("write failed,result = %d\r\n",pUSBwrMsg->result);
+			printf("write %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
+			f_close(&File);	//关闭文件
 			return ;
 		}
 		pUSBwrMsg->bread = bread;
@@ -221,7 +225,7 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		if(res != FR_OK)	
 		{
 			pUSBwrMsg->result  = res;
-			printf("close failed,result = %d\r\n",pUSBwrMsg->result);
+			printf("close %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
 			return ;
 		}
 		pUSBwrMsg->result  = res;		

@@ -21,7 +21,7 @@ typedef struct
 {
 	//WIFI STA模式
 	u8* port;//端口号
-	u8 severip[15];//服务器ip地址
+	u8 *severip;//服务器ip地址
 	u8* wifista_ssid;			//路由器SSID号
     u8* wifista_encryption;	//加密方式
     u8* wifista_password; 	//连接密码
@@ -48,7 +48,7 @@ void atk_8266_test(void);
 
 u8 atk_8266_wifista_test(void);	//WIFI STA测试
 
-
+void atk_8266_scan(void);
 //用户配置参数
 extern WiFi_config WiFiConfig;
 
