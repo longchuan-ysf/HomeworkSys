@@ -42,6 +42,7 @@
 GUI_BITMAP buttonbmp_tab[2];
 WM_HWIN WM_Camera;//显示照相机数据
 WM_HWIN WM_Picture;//显示照片
+WM_HWIN WM_WIFIList;//显示照片
 // USER START (Optionally insert additional defines)
 // USER END
 
@@ -264,7 +265,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	WM_HWIN hItem;
 	WM_HWIN hDlg;
 	int     NCode;
-	int     Id;
+	int     Id,i,ListNum;
 	static u8 ButtonFlag=0;
 	
 	hDlg = pMsg->hWin;
@@ -285,7 +286,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_LISTVIEW0);
 		LISTBOX_SetFont(hItem,&GUI_FontHZ16);
 		LISTBOX_AddString(hItem,"请打开WIFI开关");
-		
+		WM_WIFIList = hItem;
 	}
 	break;
 	case WM_NOTIFY_PARENT:
@@ -304,14 +305,15 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 					case WM_NOTIFICATION_RELEASED: //按钮被按下并释放
 					{
 						ButtonFlag=~ButtonFlag;
-						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);
+						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);	
 						if(ButtonFlag)
 						{
-							atk_8266_scan();
+							LISTBOX_DeleteItem(WM_WIFIList,0);
+							WIFIFlag.scan = 1;
 						}
 						else
 						{
-						
+							WIFIFlag.close = 1;
 						}
 					}						
 					break;	

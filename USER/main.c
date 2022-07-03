@@ -385,7 +385,7 @@ void led0_task(void *p_arg)
 	atk_8266_init();
 	while(1)
 	{
-		
+		WIFI_Flag_Handle();
 		LED0_Toggle;
 		time++;
 		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//—” ±500ms

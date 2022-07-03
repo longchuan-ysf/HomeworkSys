@@ -1,7 +1,10 @@
 #include "common.h"
-
+#include "HomeworkGUI.h"
+#include "delay.h"
 #define PATH_NETCONFIG "3:/config.txt"
 WiFi_config WiFiConfig;
+WIFI_FLAG_STRUCT WIFIFlag;
+SSID_SCAN_TABLE SSIDTable;
 /*************************************************
 function    :用默认值初始化WiFi配置参数
 input       :NULL
@@ -341,18 +344,150 @@ void atk_8266_test(void)
 	
 	//atk_8266_wifista_test();	
 }
+/*************************************************
+function    :ListWifi
+input       :Respon 收到的响应字符串
+output		:NULL
+return		:
+description :
+**************************************************/
+void ListWifi(void)
+{
+	uint8_t i;
 
+	for (i = 0; i < SSIDTable.number; i++)
+	{
+		printf("ssid:%s  erri;%s\r\n", SSIDTable.SSID[i], SSIDTable.RSSI[i]);
+		LISTBOX_AddString(WM_WIFIList,SSIDTable.SSID[i]);
+		delay_ms(10);
+	}
+}
+
+/*************************************************
+function    :SSID_Scan_Decode 从
+input       :Respon 收到的响应字符串
+output		:NULL
+return		:
+description :
+**************************************************/
+void SSID_Scan_Decode(uint8_t *Respon)
+{
+	char* start, * starttemp, * end, * endtemp, * temp;
+	int len, OneLineLen, i;
+	len = strlen(Respon);
+	SSIDTable.number = 0;
+	temp = (char*)mymalloc(SRAMIN,32);
+	if (!temp)
+	{
+		return;
+	}
+	start = (char*)Respon;
+	while (len)
+	{
+		start = (char*)strstr(start, "+CWLAP");
+		if (!start)
+		{
+			printf("find %d wifi\r\n", SSIDTable.number);
+			break;
+		}
+		end = strstr(start, "\r\n");
+		end += 2;
+		OneLineLen = end - start;
+		len -= OneLineLen;
+		starttemp = start;
+		starttemp += 11;//跳过 +CWLAP:(4,"	
+		mymemset(temp, 0, 32);
+		endtemp = strstr(starttemp, "\"");
+
+		//wifi名称不为空
+		if (endtemp-starttemp)//
+		{
+			//wifi名称
+			mymemcpy(temp, starttemp, endtemp - starttemp);
+			SSIDTable.SSID[SSIDTable.number] = (char*)mymalloc(SRAMIN,strlen(temp));
+			strcpy(SSIDTable.SSID[SSIDTable.number], temp);
+			//wifi强度
+			memset(temp, 0, 32);
+			starttemp = endtemp + 2;
+			endtemp = strstr(starttemp, ",");
+			mymemcpy(temp, starttemp, endtemp - starttemp);
+			SSIDTable.RSSI[SSIDTable.number] = (char*)mymalloc(SRAMIN,strlen(temp));
+			strcpy(SSIDTable.RSSI[SSIDTable.number], temp);
+			SSIDTable.number++;
+			if (SSIDTable.number > MAX_WIFI_NUM)
+			{
+				break;
+			}
+		}
+		start = end;
+
+	}
+	ListWifi();
+	myfree(SRAMIN,temp);
+	
+}
 void atk_8266_scan(void)
 {
-	
+	uint8_t *Respon;
 	while(atk_8266_send_cmd("AT+CWLAP","OK",200));
+	printf("cmd ok,decode\r\n");
+	Respon = mymalloc(SRAMEX,(Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3) + 1);
+	if(!Respon)
+		return;
+	mymemset(Respon,0,(Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3) + 1);
+	if(!Respon)
+	{
+		printf("malloc for ssid scan respon err!");
+		return;
+	}
+	mymemcpy(Respon,Usart3Data.USART3_RX_BUF,Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3);
+
+	SSID_Scan_Decode(Respon);
+	printf("decode ok\r\n");
+	
+	myfree(SRAMEX,Respon);
 	
 }
 
 
+void atk_8266_close(void)
+{
+	uint8_t i;
 
+	for( i=0;i<SSIDTable.number;i++)
+	{
+		
+		myfree(SRAMIN,SSIDTable.SSID[i]);
+		myfree(SRAMIN,SSIDTable.RSSI[i]);
 
+	}
+	SSIDTable.number=0;
+		
+	while(atk_8266_send_cmd("AT+CWQAP","OK",200));//关闭WiFi
+	while(LISTBOX_GetNumItems(WM_WIFIList))
+	{
+		LISTBOX_DeleteItem(WM_WIFIList,0);
+		delay_ms(10);
+	}
+	LISTBOX_AddString(WM_WIFIList,"请打开WIFI开关");
+}
 
+void WIFI_Flag_Handle(void)
+{
+	if(WIFIFlag.scan)
+	{
+		WIFIFlag.scan=0;
+		
+		atk_8266_scan();
+		printf("scan wifi ok\r\n");
+	}
+	else if(WIFIFlag.close)
+	{
+		WIFIFlag.close = 0;
+		printf("close wifi\r\n");
+		atk_8266_close();
+	}
+}
 
 
 

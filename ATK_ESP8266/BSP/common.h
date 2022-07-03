@@ -32,6 +32,18 @@ typedef struct
 	 u8* wifiap_password; 		//连接密码 
 }WiFi_config;
 
+#define MAX_WIFI_NUM 10
+typedef struct
+{
+	char* SSID[MAX_WIFI_NUM];//WIFI 名称数组 最多处理10个wifi
+	char* RSSI[MAX_WIFI_NUM];// 信号强度数组
+	unsigned char number;//检索到的有多少个wifi
+}SSID_SCAN_TABLE;
+typedef struct
+{
+	uint32_t scan:1;//打开扫描
+	uint32_t close:1;//关闭wifi
+}WIFI_FLAG_STRUCT;
 void atk_8266_init(void);
 
 void atk_8266_at_response(u8 mode);
@@ -49,10 +61,11 @@ void atk_8266_test(void);
 u8 atk_8266_wifista_test(void);	//WIFI STA测试
 
 void atk_8266_scan(void);
+void WIFI_Flag_Handle(void);
 //用户配置参数
 extern WiFi_config WiFiConfig;
-
-
+extern WIFI_FLAG_STRUCT WIFIFlag;
+extern SSID_SCAN_TABLE SSIDTable;
 #endif
 
 
