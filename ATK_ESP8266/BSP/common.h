@@ -26,10 +26,6 @@ typedef struct
     u8* wifista_encryption;	//加密方式
     u8* wifista_password; 	//连接密码
 
-	//WIFI AP模式,模块对外的无线参数,可自行修改.
-	 u8* wifiap_ssid;			//对外SSID号
-	 u8* wifiap_encryption;	//wpa/wpa2 aes加密方式
-	 u8* wifiap_password; 		//连接密码 
 }WiFi_config;
 
 #define MAX_WIFI_NUM 10
@@ -43,6 +39,7 @@ typedef struct
 {
 	uint32_t scan:1;//打开扫描
 	uint32_t close:1;//关闭wifi
+	uint32_t SelectWifi:5;//0 表示没有选择 非零表示选择列表中某个wifi
 }WIFI_FLAG_STRUCT;
 void atk_8266_init(void);
 

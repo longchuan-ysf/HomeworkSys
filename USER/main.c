@@ -99,6 +99,8 @@ CPU_STK USB_WR_TASK_STK[USB_WR_STK_SIZE];
 //USB读写任务
 void USB_WR_task(void *p_arg);
 
+OS_TMR 	tmr1;		//定时器1
+void tmr1_callback(void *p_tmr, void *p_arg); 	//定时器1回调函数
 int main(void)
 {
     OS_ERR err;
@@ -194,6 +196,15 @@ void start_task(void *p_arg)
     //WM_SetCreateFlags(WM_CF_MEMDEV);
 	WM_MULTIBUF_Enable(1);  //开启STemWin多缓冲,RGB屏可能会用到
 	OS_CRITICAL_ENTER();	//进入临界区
+	//创建定时器1
+	OSTmrCreate((OS_TMR		*)&tmr1,		//定时器1
+                (CPU_CHAR	*)"tmr1",		//定时器名字
+                (OS_TICK	 )0,			//0
+                (OS_TICK	 )50,          //50*10=500ms
+                (OS_OPT		 )OS_OPT_TMR_PERIODIC, //周期模式
+                (OS_TMR_CALLBACK_PTR)tmr1_callback,//定时器1回调函数
+                (void	    *)0,			//参数为0
+                (OS_ERR	    *)&err);		//返回的错误码		
 	//STemWin Demo任务	
 	OSTaskCreate((OS_TCB*     )&EmwindemoTaskTCB,		
 				 (CPU_CHAR*   )"Emwindemo task", 		
@@ -377,23 +388,17 @@ void Memory_Usage()
 void led0_task(void *p_arg)
 {
 	OS_ERR err;
-	u8 time=0;
+	OSTmrStart(&tmr1,&err);	//开启定时器1
 	while(!connect_usb)
 	{
 		delay_ms(500);
 	}
 	atk_8266_init();
+	atk_8266_test();
 	while(1)
 	{
 		WIFI_Flag_Handle();
-		LED0_Toggle;
-		time++;
-		OSTimeDlyHMSM(0,0,0,500,OS_OPT_TIME_PERIODIC,&err);//延时500ms
-		if(time == 10)//5秒输出一次内存使用率
-		{
-			//Memory_Usage();
-			time = 0;
-		}
+		OSTimeDlyHMSM(0,0,0,50,OS_OPT_TIME_PERIODIC,&err);//延时50ms
 	}
 }
 //USBH_Process的主要处理任务
@@ -407,3 +412,14 @@ void USB_WR_task(void *p_arg)
 	usb_app_wr();
 }
 
+//定时器1的回调函数
+void tmr1_callback(void *p_tmr, void *p_arg)
+{
+	static u8 time=0;
+	LED0_Toggle;
+	time++;
+	{
+		//Memory_Usage();
+		time = 0;
+	}
+}

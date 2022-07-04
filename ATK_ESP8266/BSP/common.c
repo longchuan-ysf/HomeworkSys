@@ -1,6 +1,7 @@
 #include "common.h"
 #include "HomeworkGUI.h"
 #include "delay.h"
+#include "background.h"
 #define PATH_NETCONFIG "3:/config.txt"
 WiFi_config WiFiConfig;
 WIFI_FLAG_STRUCT WIFIFlag;
@@ -341,8 +342,8 @@ void atk_8266_test(void)
 		printf("尝试连接模块...\r\n"); 
 	} 
 	while(atk_8266_send_cmd("ATE0","OK",200));//关闭回显
-	
-	//atk_8266_wifista_test();	
+	printf("size WIFIFlag = %d\r\n",sizeof(WIFIFlag));
+	mymemset(&WIFIFlag,0,sizeof(WIFIFlag));
 }
 /*************************************************
 function    :ListWifi
@@ -364,11 +365,11 @@ void ListWifi(void)
 }
 
 /*************************************************
-function    :SSID_Scan_Decode 从
+function    :SSID_Scan_Decode 
 input       :Respon 收到的响应字符串
 output		:NULL
 return		:
-description :
+description :解析wifi扫描响应
 **************************************************/
 void SSID_Scan_Decode(uint8_t *Respon)
 {
@@ -426,6 +427,13 @@ void SSID_Scan_Decode(uint8_t *Respon)
 	myfree(SRAMIN,temp);
 	
 }
+/*************************************************
+function    :atk_8266_scan 
+input       :NULL
+output		:NULL
+return		:
+description :扫描周围可用wifi
+**************************************************/
 void atk_8266_scan(void)
 {
 	uint8_t *Respon;
@@ -449,7 +457,13 @@ void atk_8266_scan(void)
 	
 }
 
-
+/*************************************************
+function    :atk_8266_close 
+input       :NULL
+output		:NULL
+return		:
+description :关闭wifi
+**************************************************/
 void atk_8266_close(void)
 {
 	uint8_t i;
@@ -471,7 +485,43 @@ void atk_8266_close(void)
 	}
 	LISTBOX_AddString(WM_WIFIList,"请打开WIFI开关");
 }
+/*************************************************
+function    :WIFI_Flag_Handle 
+input       :NULL
+output		:NULL
+return		:
+description :与GUI联动的一些标志处理
+**************************************************/
+void SelectWiFiHandle(uint8_t index)
+{
+	int res; 
+	index=index-1;//换成0开始的索引
+	
+	res = strcmp(WiFiConfig.wifista_ssid,SSIDTable.SSID[index]);
+	if(!res)//存储中有记录
+	{
+		printf("connect record wifi, SSID=%s\r\n",SSIDTable.SSID[index]);
+		u8 *p=mymalloc(SRAMIN,32);	
+		atk_8266_send_cmd("AT+CWMODE=1","OK",50);		//设置WIFI STA模式
 
+		//设置连接到的WIFI网络名称/加密方式/密码,这几个参数需要根据您自己的路由器设置进行修改!! 
+		sprintf((char*)p,"AT+CWJAP=\"%s\",\"%s\"",WiFiConfig.wifista_ssid,WiFiConfig.wifista_password);//设置无线参数:ssid,密码
+		while(atk_8266_send_cmd(p,"WIFI GOT IP",500));	//连接目标路由器,并且获得IP
+		BackGroundCtrl.ConnectState = 1;
+		myfree(SRAMIN,p);
+	}
+	else//存储中无记录需要输密码
+	{
+		printf("connect new wifi, SSID=%s\r\n",SSIDTable.SSID[index]);
+	}
+}
+/*************************************************
+function    :WIFI_Flag_Handle 
+input       :NULL
+output		:NULL
+return		:
+description :与GUI联动的一些标志处理
+**************************************************/
 void WIFI_Flag_Handle(void)
 {
 	if(WIFIFlag.scan)
@@ -486,6 +536,12 @@ void WIFI_Flag_Handle(void)
 		WIFIFlag.close = 0;
 		printf("close wifi\r\n");
 		atk_8266_close();
+	}
+	else if(WIFIFlag.SelectWifi)
+	{
+		printf("select %d wifi\r\n",WIFIFlag.SelectWifi);
+		SelectWiFiHandle(WIFIFlag.SelectWifi);
+		WIFIFlag.SelectWifi=0;	
 	}
 }
 

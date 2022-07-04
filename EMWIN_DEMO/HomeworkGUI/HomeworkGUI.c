@@ -265,7 +265,8 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	WM_HWIN hItem;
 	WM_HWIN hDlg;
 	int     NCode;
-	int     Id,i,ListNum;
+	int     Id;
+	uint8_t ListNum;
 	static u8 ButtonFlag=0;
 	
 	hDlg = pMsg->hWin;
@@ -316,6 +317,26 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 							WIFIFlag.close = 1;
 						}
 					}						
+					break;	
+				}
+			}
+			break;
+			case GUI_ID_LISTVIEW0: //BUTTON_0的通知代码，控制LED1
+			{
+				hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_LISTVIEW0);
+				
+				switch(NCode) 
+				{
+					case WM_NOTIFICATION_CLICKED:
+					break;
+					case WM_NOTIFICATION_RELEASED:
+					{
+						ListNum = LISTBOX_GetSel(WM_WIFIList);					
+						if(ButtonFlag)//确保wifi是在打开状态
+						{
+							WIFIFlag.SelectWifi= (ListNum+1)&0x0f;//因为返回的索引是以0开头的 SelectWifi为了方便判断是否选了是以1开头的
+						}
+					}
 					break;	
 				}
 			}
