@@ -2,6 +2,7 @@
 #include "HomeworkGUI.h"
 #include "delay.h"
 #include "background.h"
+#include "keypad.h"
 #define PATH_NETCONFIG "3:/config.txt"
 WiFi_config WiFiConfig;
 WIFI_FLAG_STRUCT WIFIFlag;
@@ -56,7 +57,17 @@ void Decode_config(uint8_t *ConfigStr,uint8_t *ConfigName,uint8_t *Config)
 	uint8_t *start,*end;
 	
 	start = (uint8_t *)strstr((char *)ConfigStr,(char *)ConfigName);
+	if(!start)
+	{
+		printf("not have config:%s\r\n",ConfigName);
+		return;
+	}
 	end = (uint8_t *)strstr((char *)start,"\r\n");
+	if(!end)
+	{
+		printf("format err s\r\n");
+		return;
+	}
 	start+=strlen((char *)ConfigName);
 	
 	mymemcpy(Config,start,end-start);
@@ -114,36 +125,36 @@ void atk_8266_init(void)
 		myfree(SRAMIN,temp);
 		return;
 	}
-
+	printf("read data;\r\n%s",data);
 	mymemset(temp,0,64);
 	Decode_config(data,(uint8_t *)"SSID : ",temp);
 	WiFiConfig.wifista_ssid = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
 	strcpy((char *)WiFiConfig.wifista_ssid,(char *)temp);
-	printf("ssid = %s\r\n",WiFiConfig.wifista_ssid);
+	printf("Decode ssid = %s\r\n",WiFiConfig.wifista_ssid);
 	
 	mymemset(temp,0,64);
 	Decode_config(data,(uint8_t *)"Password : ",temp);
 	WiFiConfig.wifista_password = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
 	strcpy((char *)WiFiConfig.wifista_password,(char *)temp);
-	printf("password = %s\r\n",WiFiConfig.wifista_password);
+	printf("Decode password = %s\r\n",WiFiConfig.wifista_password);
 	
 	mymemset(temp,0,64);
 	Decode_config(data,(uint8_t *)"Encryption : ",temp);
 	WiFiConfig.wifista_encryption = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
 	strcpy((char *)WiFiConfig.wifista_encryption,(char *)temp);
-	printf("encryption = %s\r\n",WiFiConfig.wifista_encryption);
+	printf("Decode encryption = %s\r\n",WiFiConfig.wifista_encryption);
 	
 	mymemset(temp,0,64);
 	Decode_config(data,(uint8_t *)"ServerPort : ",temp);
 	WiFiConfig.port = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
 	strcpy((char *)WiFiConfig.port,(char *)temp);
-	printf("port = %s\r\n",WiFiConfig.port);
+	printf("Decode port = %s\r\n",WiFiConfig.port);
 	
 	mymemset(temp,0,64);
 	Decode_config(data,(uint8_t *)"ServerIP : ",temp);
 	WiFiConfig.severip = (u8 *)mymalloc(SRAMIN,strlen((char *)temp));
 	strcpy((char *)WiFiConfig.severip,(char *)temp);
-	printf("severip = %s\r\n",WiFiConfig.severip);
+	printf("Decode severip = %s\r\n",WiFiConfig.severip);
 	
 	f_close(NetConfig);
 	myfree(SRAMIN,data);
@@ -374,8 +385,8 @@ description :解析wifi扫描响应
 void SSID_Scan_Decode(uint8_t *Respon)
 {
 	char* start, * starttemp, * end, * endtemp, * temp;
-	int len, OneLineLen, i;
-	len = strlen(Respon);
+	int len, OneLineLen;
+	len = strlen((char *)Respon);
 	SSIDTable.number = 0;
 	temp = (char*)mymalloc(SRAMIN,32);
 	if (!temp)
@@ -483,21 +494,78 @@ void atk_8266_close(void)
 		LISTBOX_DeleteItem(WM_WIFIList,0);
 		delay_ms(10);
 	}
+	LISTBOX_DeleteItem(WM_WIFIConnect,0);
+	LISTBOX_AddString(WM_WIFIConnect,"WIFI未连接");
 	LISTBOX_AddString(WM_WIFIList,"请打开WIFI开关");
 }
 /*************************************************
-function    :WIFI_Flag_Handle 
+function    :Save_New_Wifi 
 input       :NULL
 output		:NULL
 return		:
-description :与GUI联动的一些标志处理
+description :
+**************************************************/
+void Save_New_Wifi(void)
+{
+	FIL *NetConfig;
+	uint32_t br;
+	uint8_t *data;
+	uint8_t res;
+	
+	NetConfig=mymalloc(SRAMIN,sizeof(FIL));
+	
+	res = f_open(NetConfig,PATH_NETCONFIG,FA_WRITE);
+	if(res)
+	{
+		printf("open config file err, use default config\r\n");
+		return;
+	}
+	data = mymalloc(SRAMIN,128);
+	if(!data)
+	{
+		printf("malloc err\r\n");
+		return;
+	}
+	mymemset(data,0,128);
+	sprintf((char *)data,"SSID : %s\r\n",WiFiConfig.wifista_ssid);
+	res = f_write(NetConfig,data,strlen((char *)data),&br);
+	
+	mymemset(data,0,128);
+	sprintf((char *)data,"Password : %s\r\n",WiFiConfig.wifista_password);
+	res = f_write(NetConfig,data,strlen((char *)data),&br);
+	
+	mymemset(data,0,128);
+	sprintf((char *)data,"Encryption : %s\r\n",WiFiConfig.wifista_encryption);
+	res = f_write(NetConfig,data,strlen((char *)data),&br);
+	
+	mymemset(data,0,128);
+	sprintf((char *)data,"ServerPort : %s\r\n",WiFiConfig.port);
+	res = f_write(NetConfig,data,strlen((char *)data),&br);
+	
+	mymemset(data,0,128);
+	sprintf((char *)data,"ServerIP : %s\r\n",WiFiConfig.severip);
+	res = f_write(NetConfig,data,strlen((char *)data),&br);
+	
+	f_close(NetConfig);
+	
+	myfree(SRAMIN,data);
+
+//	
+	//其他参数暂时不关心
+}
+/*************************************************
+function    :SelectWiFiHandle 
+input       :NULL
+output		:NULL
+return		:
+description :选中wifi之后的处理
 **************************************************/
 void SelectWiFiHandle(uint8_t index)
 {
 	int res; 
 	index=index-1;//换成0开始的索引
 	
-	res = strcmp(WiFiConfig.wifista_ssid,SSIDTable.SSID[index]);
+	res = strcmp((char *)WiFiConfig.wifista_ssid,(char *)SSIDTable.SSID[index]);
 	if(!res)//存储中有记录
 	{
 		printf("connect record wifi, SSID=%s\r\n",SSIDTable.SSID[index]);
@@ -506,13 +574,52 @@ void SelectWiFiHandle(uint8_t index)
 
 		//设置连接到的WIFI网络名称/加密方式/密码,这几个参数需要根据您自己的路由器设置进行修改!! 
 		sprintf((char*)p,"AT+CWJAP=\"%s\",\"%s\"",WiFiConfig.wifista_ssid,WiFiConfig.wifista_password);//设置无线参数:ssid,密码
-		while(atk_8266_send_cmd(p,"WIFI GOT IP",500));	//连接目标路由器,并且获得IP
+		while(atk_8266_send_cmd(p,"WIFI GOT IP",1000));	//连接目标路由器,并且获得IP
 		BackGroundCtrl.ConnectState = 1;
 		myfree(SRAMIN,p);
+		
+		LISTBOX_DeleteItem(WM_WIFIConnect,0);
+		LISTBOX_DeleteItem(WM_WIFIList,index);
+		LISTBOX_AddString(WM_WIFIConnect,SSIDTable.SSID[index]);
 	}
 	else//存储中无记录需要输密码
 	{
 		printf("connect new wifi, SSID=%s\r\n",SSIDTable.SSID[index]);
+		keypad_dev.Finish =0;
+		DisplayDialogMsg.x0	=80;
+		DisplayDialogMsg.y0	= 80;
+		DisplayDialogMsg.xSize = 300;
+		DisplayDialogMsg.ySize = 200;
+		DisplayDialogMsg.DialogTiltle= "提示";
+		DisplayDialogMsg.Editname = "请输入WiFi密码";
+		DisplayDialogMsg.hFrame=CreatDispalyDialog(DialogSelectWiFi,&DisplayDialogMsg);
+		WM_SetFocus(WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_EDIT9));
+		while(!keypad_dev.Finish)
+		{
+			delay_ms(500);
+		}
+		printf("FinalData = %s\r\n",keypad_dev.FinalData);
+		u8 *p=mymalloc(SRAMIN,32);	
+		atk_8266_send_cmd("AT+CWMODE=1","OK",50);		//设置WIFI STA模式
+
+		//设置连接到的WIFI网络名称/加密方式/密码,这几个参数需要根据您自己的路由器设置进行修改!! 
+		sprintf((char*)p,"AT+CWJAP=\"%s\",\"%s\"",SSIDTable.SSID[index],keypad_dev.FinalData);//设置无线参数:ssid,密码
+		while(atk_8266_send_cmd(p,"WIFI GOT IP",1000));	//连接目标路由器,并且获得IP
+		BackGroundCtrl.ConnectState = 1;
+		myfree(SRAMIN,p);
+		
+		myfree(SRAMIN,WiFiConfig.wifista_ssid);
+		WiFiConfig.wifista_ssid = mymalloc(SRAMIN,strlen(SSIDTable.SSID[index]));
+		strcpy((char *)WiFiConfig.wifista_ssid,(char *)SSIDTable.SSID[index]);
+		
+		myfree(SRAMIN,WiFiConfig.wifista_password);
+		WiFiConfig.wifista_password = mymalloc(SRAMIN,strlen((char *)keypad_dev.FinalData));
+		strcpy((char *)WiFiConfig.wifista_password,(char *)keypad_dev.FinalData);
+		printf("new ssdi=%s,pwd=%s\r\n",WiFiConfig.wifista_ssid,WiFiConfig.wifista_password);
+		Save_New_Wifi();
+		LISTBOX_DeleteItem(WM_WIFIConnect,0);
+		LISTBOX_DeleteItem(WM_WIFIList,index);
+		LISTBOX_AddString(WM_WIFIConnect,SSIDTable.SSID[index]);
 	}
 }
 /*************************************************

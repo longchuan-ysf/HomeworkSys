@@ -30,6 +30,7 @@
 #include "camera_app.h"
 #include "malloc.h"
 #include "common.h"
+#include "keypad.h"
 /*********************************************************************
 *
 *       Defines
@@ -42,10 +43,12 @@
 GUI_BITMAP buttonbmp_tab[2];
 WM_HWIN WM_Camera;//显示照相机数据
 WM_HWIN WM_Picture;//显示照片
-WM_HWIN WM_WIFIList;//显示照片
+WM_HWIN WM_WIFIList;//显示可用WiFi
+WM_HWIN WM_WIFIConnect;//显示连接wifi
+WM_HWIN DialogSelectWiFi;
 // USER START (Optionally insert additional defines)
 // USER END
-
+Dialog_MSG DisplayDialogMsg;
 /*********************************************************************
 *
 *       Static data
@@ -90,10 +93,12 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
 };  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
-  { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     700,    FRAMEWIN_CF_MOVEABLE },
+  { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     800,    FRAMEWIN_CF_MOVEABLE },
   { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      180,  10,    110,     40,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     20,     TEXT_CF_LEFT },
-  { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   60,    200,     500,    0 },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     20,     TEXT_CF_LEFT },/*y 50 */
+  { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW1,    50,   55,    200,     35,    0 },
+  { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   100,    200,     300,    0 },
+  
 };
 
 /*********************************************************************
@@ -131,15 +136,7 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
 		TEXT_SetTextColor(hItem,GUI_RED);
 		TEXT_SetText(hItem,"第  张/共  图片");
-		
-		
-//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
-//		BUTTON_SetBitmapEx(hItem,0,&bmlift,0,0);
-//		BUTTON_SetText(hItem, "");
-//		
-//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON2);
-//		BUTTON_SetBitmapEx(hItem,0,&bmright,0,0);
-//		BUTTON_SetText(hItem, "");
+	
 	}
 	break;
 	case WM_PAINT:	  
@@ -205,18 +202,13 @@ static void _cbDialogPage2(WM_MESSAGE * pMsg) {
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:	  
 	{
-		printf("init page 1\r\n");
+
 	
-		//初始化BUTTON
-//		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
-//		BUTTON_SetBitmapEx(hItem,0,&bmcamera2,0,0);
-//		BUTTON_SetText(hItem, "");
 	}
 	break;
 	case WM_PAINT:	  
 	{
 
-		//hItem = WM_GetDialogItem(hDlg, GUI_ID_IMAGE1);
 	    IMAGE_SetBitmap(WM_Camera,&bm2_c);
 		Start_Camera();
 	
@@ -288,6 +280,14 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 		LISTBOX_SetFont(hItem,&GUI_FontHZ16);
 		LISTBOX_AddString(hItem,"请打开WIFI开关");
 		WM_WIFIList = hItem;
+		LISTBOX_SetItemSpacing(WM_WIFIList,5);
+		
+		WM_WIFIConnect = hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_LISTVIEW1);
+		LISTBOX_SetFont(hItem,&GUI_FontHZ16);
+		LISTBOX_AddString(hItem,"wifi未连接");
+		
+		CreatKeypad(hDlg,0,410,470,400);
+
 	}
 	break;
 	case WM_NOTIFY_PARENT:
@@ -306,7 +306,15 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 					case WM_NOTIFICATION_RELEASED: //按钮被按下并释放
 					{
 						ButtonFlag=~ButtonFlag;
-						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);	
+						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);
+//						DisplayDialogMsg.x0	=80;
+//						DisplayDialogMsg.y0	= 80;
+//						DisplayDialogMsg.xSize = 300;
+//						DisplayDialogMsg.ySize = 200;
+//						DisplayDialogMsg.DialogTiltle= "提示";
+//						DisplayDialogMsg.Editname = "请输入WiFi密码";
+//						DisplayDialogMsg.hFrame=CreatDispalyDialog(hDlg,&DisplayDialogMsg);
+//						WM_SetFocus(WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_EDIT9));
 						if(ButtonFlag)
 						{
 							LISTBOX_DeleteItem(WM_WIFIList,0);
@@ -363,7 +371,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 	int     NCode;
 	int     Id;
 	char PageIndex;
-	PAGEHANDLE_PARA para;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:
 	{
@@ -389,13 +396,12 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		MULTIPAGE_AddPage(hItem, hDialog, "提交作业");
 		
 		//第三页
-		hDialog = GUI_CreateDialogBox(_aDialogCreatePage3, GUI_COUNTOF(_aDialogCreatePage3), _cbDialogPage3, WM_UNATTACHED, 0, 0);
-		MULTIPAGE_AddPage(hItem, hDialog, "系统设置");
+		DialogSelectWiFi = GUI_CreateDialogBox(_aDialogCreatePage3, GUI_COUNTOF(_aDialogCreatePage3), _cbDialogPage3, WM_UNATTACHED, 0, 0);
+		MULTIPAGE_AddPage(hItem, DialogSelectWiFi, "系统设置");
 		CurrentPage=2;//当前页面
 		PreviousPage=2;//之前页面
 		
-//		PageIndex=MULTIPAGE_GetSelection (hItem); 
-//		PageHnadle_main(PageIndex);
+
 		MULTIPAGE_SetTabWidth(hItem,100,0); //not supported for v5.24		
 		MULTIPAGE_SetTabWidth(hItem,100,1); //not supported for v5.24
 		MULTIPAGE_SetTabWidth(hItem,100,2); //not supported for v5.24
