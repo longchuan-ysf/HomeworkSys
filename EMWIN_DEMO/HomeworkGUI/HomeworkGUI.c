@@ -40,12 +40,19 @@
 #define ID_FRAMEWIN_0    (GUI_ID_USER + 0x00)
 #define ID_MULTIPAGE_0    (GUI_ID_USER + 0x01)
 
+u8 ButtonFlag_wifi=0;
+u8 ButtonFlag_sever=0;
+
 GUI_BITMAP buttonbmp_tab[2];
 WM_HWIN WM_Camera;//显示照相机数据
 WM_HWIN WM_Picture;//显示照片
 WM_HWIN WM_WIFIList;//显示可用WiFi
 WM_HWIN WM_WIFIConnect;//显示连接wifi
 WM_HWIN DialogSelectWiFi;
+
+WM_HWIN EDIT_ServerIP;
+WM_HWIN EDIT_ServerPort;
+WM_HWIN BUTTON_ServerSwitch;
 // USER START (Optionally insert additional defines)
 // USER END
 Dialog_MSG DisplayDialogMsg;
@@ -94,10 +101,18 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage3[] = {
 //pfCreateIndirect             pName     Id                   x0    y0     xSize    ySize   Flags
   { WINDOW_CreateIndirect,    "Dialog",  0,                   0,    0,     470,     800,    FRAMEWIN_CF_MOVEABLE },
-  { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      180,  10,    110,     40,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        50,   20,    100,     20,     TEXT_CF_LEFT },/*y 50 */
+  { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON0,      130,  10,    110,     40,     0},
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT1,        50,   20,    80,     20,     TEXT_CF_LEFT },/*y 50 */
   { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW1,    50,   55,    200,     35,    0 },
   { LISTBOX_CreateIndirect,   "",        GUI_ID_LISTVIEW0,    50,   100,    200,     300,    0 },
+  /*服务器ip*/
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT2,        300,   10,   100,     20,    0 },
+  { EDIT_CreateIndirect,      "",        GUI_ID_EDIT0,        300,   40,   160,     25,    0 },
+  /*服务器端口*/
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT3,        300,   80,   100,     20,    0 },
+  { EDIT_CreateIndirect,      "",        GUI_ID_EDIT1,        300,   110,   100,     25,    0 },
+  
+  { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON1,      300,   145,    110,     40,     0},
   
 };
 
@@ -259,21 +274,33 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	int     NCode;
 	int     Id;
 	uint8_t ListNum;
-	static u8 ButtonFlag=0;
 	
+	char Data[16];
 	hDlg = pMsg->hWin;
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:	  
 	{
 		//初始化TEXT
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT1);
+		TEXT_SetFont(hItem,&GUI_FontHZ16);
+		TEXT_SetText(hItem,"wifi开关");
+
 		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT2);
 		TEXT_SetFont(hItem,&GUI_FontHZ16);
-		TEXT_SetText(hItem,"无线局域网");
-
+		TEXT_SetText(hItem,"服务器IP");
+		
+		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT3);
+		TEXT_SetFont(hItem,&GUI_FontHZ16);
+		TEXT_SetText(hItem,"服务器端口");
 		//初始化BUTTON
 		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON0);
 		BUTTON_SetBitmapEx(hItem,0,&buttonbmp_tab[0],0,0);
 		BUTTON_SetText(hItem, "");
+		
+		//初始化BUTTON
+		BUTTON_ServerSwitch = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
+		BUTTON_SetBitmapEx(BUTTON_ServerSwitch,0,&buttonbmp_tab[0],0,0);
+		BUTTON_SetText(BUTTON_ServerSwitch, "");
 		
 		//初始化列表
 		hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_LISTVIEW0);
@@ -286,6 +313,15 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 		LISTBOX_SetFont(hItem,&GUI_FontHZ16);
 		LISTBOX_AddString(hItem,"wifi未连接");
 		
+		EDIT_ServerIP = WM_GetDialogItem(hDlg, GUI_ID_EDIT0);
+		EDIT_SetFont(EDIT_ServerIP, &GUI_Font20_ASCII);
+		EDIT_SetMaxLen(EDIT_ServerIP,16);
+		//EDIT_SetText(hItem, (char *)"192.168.200.152");
+		
+		EDIT_ServerPort = WM_GetDialogItem(hDlg, GUI_ID_EDIT1);
+		EDIT_SetFont(EDIT_ServerPort, &GUI_Font20_ASCII);
+		//EDIT_SetText(hItem, (char *)"8080");
+		
 		CreatKeypad(hDlg,0,410,470,400);
 
 	}
@@ -294,6 +330,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 	{	
 		Id    = WM_GetId(pMsg->hWinSrc);
 		NCode = pMsg->Data.v;	
+		printf("%s ID=%d,NCode=%d\r\n",__func__,Id,NCode);
 		switch(Id) 
 		{
 			case GUI_ID_BUTTON0: //BUTTON_0的通知代码，控制LED1
@@ -305,17 +342,9 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 					break;
 					case WM_NOTIFICATION_RELEASED: //按钮被按下并释放
 					{
-						ButtonFlag=~ButtonFlag;
-						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);
-//						DisplayDialogMsg.x0	=80;
-//						DisplayDialogMsg.y0	= 80;
-//						DisplayDialogMsg.xSize = 300;
-//						DisplayDialogMsg.ySize = 200;
-//						DisplayDialogMsg.DialogTiltle= "提示";
-//						DisplayDialogMsg.Editname = "请输入WiFi密码";
-//						DisplayDialogMsg.hFrame=CreatDispalyDialog(hDlg,&DisplayDialogMsg);
-//						WM_SetFocus(WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_EDIT9));
-						if(ButtonFlag)
+						ButtonFlag_wifi=~ButtonFlag_wifi;
+						BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag_wifi?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);
+						if(ButtonFlag_wifi)
 						{
 							LISTBOX_DeleteItem(WM_WIFIList,0);
 							WIFIFlag.scan = 1;
@@ -331,8 +360,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 			break;
 			case GUI_ID_LISTVIEW0: //BUTTON_0的通知代码，控制LED1
 			{
-				hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_LISTVIEW0);
-				
+				hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_LISTVIEW0);			
 				switch(NCode) 
 				{
 					case WM_NOTIFICATION_CLICKED:
@@ -340,7 +368,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 					case WM_NOTIFICATION_RELEASED:
 					{
 						ListNum = LISTBOX_GetSel(WM_WIFIList);					
-						if(ButtonFlag)//确保wifi是在打开状态
+						if(ButtonFlag_wifi)//确保wifi是在打开状态
 						{
 							WIFIFlag.SelectWifi= (ListNum+1)&0x0f;//因为返回的索引是以0开头的 SelectWifi为了方便判断是否选了是以1开头的
 						}
@@ -349,7 +377,81 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 				}
 			}
 			break;
+			case GUI_ID_EDIT0:
+			{
+				switch(NCode) 
+				{
+					case WM_NOTIFICATION_GOT_FOCUS:
+					{					
+						hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_EDIT0);	
+						EDIT_EnableBlink(hItem, 500, 1);
+						WM_SetFocus(hItem);
+					}
+					break;	
+				}
+				
+			}
+			break;
+			case GUI_ID_EDIT1:
+			{
+				switch(NCode) 
+				{
+					case WM_NOTIFICATION_GOT_FOCUS:
+					{					
+						hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_EDIT1);	
+						EDIT_EnableBlink(hItem, 500, 1);
+						WM_SetFocus(hItem);
+					}
+					break;	
+				}
+			}
+			break;
+			case GUI_ID_BUTTON1: //BUTTON_1的通知代码
+			{
+				
+				
+					hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_BUTTON1);
+					switch(NCode) 
+					{
+						case WM_NOTIFICATION_CLICKED:
+						break;
+						case WM_NOTIFICATION_RELEASED: //按钮被按下并释放
+						{
+							if(!ButtonFlag_wifi)
+							{
 
+								WIFIFlag.WaitForWifi = 1;
+								printf("WaitForWifi\r\n");
+							}
+							else
+							{
+							
+								ButtonFlag_sever=~ButtonFlag_sever;
+								BUTTON_SetBitmapEx(hItem,BUTTON_BI_UNPRESSED,ButtonFlag_sever?&buttonbmp_tab[1]:&buttonbmp_tab[0],0,0);
+								if(ButtonFlag_sever)
+								{
+									WIFIFlag.ConnectServer = 1;
+
+									hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_EDIT0);	
+									mymemset(Data,0,16);
+									EDIT_GetText(hItem,&Data[0],16);
+									printf("server ip=%s\r\n",Data);
+									
+									hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_EDIT1);	
+									mymemset(Data,0,16);
+									EDIT_GetText(hItem,&Data[0],16);
+									printf("server port=%s\r\n",Data);
+								}
+								else
+								{
+									WIFIFlag.ConnectServer = 2;
+								}
+							}						
+						
+						}break;	
+					}
+			}
+			break;
 		}
 	}
 	break;
@@ -374,7 +476,6 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 	switch (pMsg->MsgId) {
 	case WM_INIT_DIALOG:
 	{
-		printf("init multipage \r\n");
 		//
 		// 初始化框架
 		//

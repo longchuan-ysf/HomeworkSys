@@ -40,6 +40,10 @@ typedef struct
 	uint32_t scan:1;//打开扫描
 	uint32_t close:1;//关闭wifi
 	uint32_t SelectWifi:5;//0 表示没有选择 非零表示选择列表中某个wifi
+	
+	uint32_t ConnectServer:2;//0 表示无操作 1表示连接服务器，2表示断开服务器连接
+	
+	uint32_t WaitForWifi:1;//等待wifi连接
 }WIFI_FLAG_STRUCT;
 void atk_8266_init(void);
 

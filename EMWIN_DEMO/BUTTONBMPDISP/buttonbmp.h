@@ -26,9 +26,4 @@ extern GUI_CONST_STORAGE GUI_BITMAP bmlift;
 extern GUI_CONST_STORAGE GUI_BITMAP bmright;
 extern  GUI_BITMAP bm2_c;
 #endif
-
-
-
-
- 
   

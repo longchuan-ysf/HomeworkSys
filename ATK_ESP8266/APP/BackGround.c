@@ -52,6 +52,7 @@ Background_Flag BackgroundFlag;
 	BackGroundCtrl.ConnectState = 2;
     myfree(SRAMIN,p);		//释放内存 
  }
+ 
   /**
  ****************************************************************************************
  @brief:    BackGround_Check_WiFiState 检查WiFi连接状态
@@ -88,7 +89,7 @@ Background_Flag BackgroundFlag;
  void BackGroundInit(void)
  {
 	 memset(&BackGroundCtrl,0,sizeof(BackGroundCtrl));
-	 BackGround_Connect_WiFi();
+	 //BackGround_Connect_WiFi();
 	 
 	 BackGroundCtrl.MaxTxBufferLen = Usart3Data.USART3_MAX_SEND_LEN;
 	 BackGroundCtrl.MaxRxBufferLen = Usart3Data.USART3_MAX_RECV_LEN;

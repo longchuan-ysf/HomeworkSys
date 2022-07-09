@@ -1,5 +1,6 @@
 #include "common.h"
 #include "HomeworkGUI.h"
+
 #include "delay.h"
 #include "background.h"
 #include "keypad.h"
@@ -159,9 +160,10 @@ void atk_8266_init(void)
 	f_close(NetConfig);
 	myfree(SRAMIN,data);
 	myfree(SRAMIN,temp);
-//	
-	//其他参数暂时不关心
-	
+
+	EDIT_SetText(EDIT_ServerIP, (char *)WiFiConfig.severip);
+			
+	EDIT_SetText(EDIT_ServerPort, (char *)WiFiConfig.port);
 }
 /*************************************************
 function    :释放初始化时申请的内存
@@ -598,30 +600,92 @@ void SelectWiFiHandle(uint8_t index)
 		{
 			delay_ms(500);
 		}
-		printf("FinalData = %s\r\n",keypad_dev.FinalData);
-		u8 *p=mymalloc(SRAMIN,32);	
-		atk_8266_send_cmd("AT+CWMODE=1","OK",50);		//设置WIFI STA模式
+		if(keypad_dev.Finish&0x01)//第一位是完成输入 第二位是取消输入
+		{
+			
+			printf("FinalData = %s\r\n",keypad_dev.FinalData);
+			u8 *p=mymalloc(SRAMIN,32);	
+			atk_8266_send_cmd("AT+CWMODE=1","OK",50);		//设置WIFI STA模式
 
-		//设置连接到的WIFI网络名称/加密方式/密码,这几个参数需要根据您自己的路由器设置进行修改!! 
-		sprintf((char*)p,"AT+CWJAP=\"%s\",\"%s\"",SSIDTable.SSID[index],keypad_dev.FinalData);//设置无线参数:ssid,密码
-		while(atk_8266_send_cmd(p,"WIFI GOT IP",1000));	//连接目标路由器,并且获得IP
-		BackGroundCtrl.ConnectState = 1;
-		myfree(SRAMIN,p);
-		
-		myfree(SRAMIN,WiFiConfig.wifista_ssid);
-		WiFiConfig.wifista_ssid = mymalloc(SRAMIN,strlen(SSIDTable.SSID[index]));
-		strcpy((char *)WiFiConfig.wifista_ssid,(char *)SSIDTable.SSID[index]);
-		
-		myfree(SRAMIN,WiFiConfig.wifista_password);
-		WiFiConfig.wifista_password = mymalloc(SRAMIN,strlen((char *)keypad_dev.FinalData));
-		strcpy((char *)WiFiConfig.wifista_password,(char *)keypad_dev.FinalData);
-		printf("new ssdi=%s,pwd=%s\r\n",WiFiConfig.wifista_ssid,WiFiConfig.wifista_password);
-		Save_New_Wifi();
-		LISTBOX_DeleteItem(WM_WIFIConnect,0);
-		LISTBOX_DeleteItem(WM_WIFIList,index);
-		LISTBOX_AddString(WM_WIFIConnect,SSIDTable.SSID[index]);
+			//设置连接到的WIFI网络名称/加密方式/密码,这几个参数需要根据您自己的路由器设置进行修改!! 
+			sprintf((char*)p,"AT+CWJAP=\"%s\",\"%s\"",SSIDTable.SSID[index],keypad_dev.FinalData);//设置无线参数:ssid,密码
+			while(atk_8266_send_cmd(p,"WIFI GOT IP",1000));	//连接目标路由器,并且获得IP
+			BackGroundCtrl.ConnectState = 1;
+			myfree(SRAMIN,p);
+			
+			myfree(SRAMIN,WiFiConfig.wifista_ssid);
+			WiFiConfig.wifista_ssid = mymalloc(SRAMIN,strlen(SSIDTable.SSID[index]));
+			strcpy((char *)WiFiConfig.wifista_ssid,(char *)SSIDTable.SSID[index]);
+			
+			myfree(SRAMIN,WiFiConfig.wifista_password);
+			WiFiConfig.wifista_password = mymalloc(SRAMIN,strlen((char *)keypad_dev.FinalData));
+			strcpy((char *)WiFiConfig.wifista_password,(char *)keypad_dev.FinalData);
+			printf("new ssdi=%s,pwd=%s\r\n",WiFiConfig.wifista_ssid,WiFiConfig.wifista_password);
+			Save_New_Wifi();
+			LISTBOX_DeleteItem(WM_WIFIConnect,0);
+			LISTBOX_DeleteItem(WM_WIFIList,index);
+			LISTBOX_AddString(WM_WIFIConnect,SSIDTable.SSID[index]);
+		}
+		else
+		{
+			printf("取消输入\r\n");
+		}
+
 	}
 }
+
+/*************************************************
+function    :GUI_connect_server 
+input       :NULL
+output		:NULL
+return		:
+description :连接到服务器
+**************************************************/
+
+void GUI_Connect_Server(void)
+{
+	uint8_t res,cnt;
+	WM_MESSAGE 	Msg;
+	u8 *p=mymalloc(SRAMIN,64);	
+
+	atk_8266_send_cmd("AT+CIPMUX=0","OK",500);   //0：单连接，1：多连接
+	sprintf((char*)p,"AT+CIPSTART=\"TCP\",\"%s\",%s",WiFiConfig.severip,(u8*)WiFiConfig.port);    //配置目标TCP服务器
+	cnt=0;
+	do
+	{
+		res = atk_8266_send_cmd(p,"OK",500);
+		cnt++;
+		if(cnt>=5)//尝试连接5次
+		{
+			ButtonFlag_sever=0;
+			BUTTON_SetBitmapEx(BUTTON_ServerSwitch,0,&buttonbmp_tab[0],0,0);
+			printf("ATK-ESP 连接TCP 服务器失败\r\n"); //连接失败	
+			myfree(SRAMIN,p);		//释放内存 		
+			return;
+	
+		}
+	}
+	while(res);
+		
+	atk_8266_send_cmd("AT+CIPMODE=1","OK",500);      //传输模式为：透传			
+	Usart3Data.USART3_RX_STA=0;
+	
+	BackGroundCtrl.ConnectState = 2;
+    myfree(SRAMIN,p);		//释放内存 
+}
+/*************************************************
+function    :GUI_connect_server 
+input       :NULL
+output		:NULL
+return		:
+description :连接到服务器
+**************************************************/
+
+//void GUI_Disconnect_Server(void)
+//{
+//	atk_8266_send_cmd("AT+CIPCLOSE","OK",500);   //断开tcp连接
+//	BackGroundCtrl.ConnectState = 1;
+//}
 /*************************************************
 function    :WIFI_Flag_Handle 
 input       :NULL
@@ -649,6 +713,38 @@ void WIFI_Flag_Handle(void)
 		printf("select %d wifi\r\n",WIFIFlag.SelectWifi);
 		SelectWiFiHandle(WIFIFlag.SelectWifi);
 		WIFIFlag.SelectWifi=0;	
+	}
+	else if(WIFIFlag.ConnectServer)	
+	{
+		if(WIFIFlag.ConnectServer == 1)
+		{
+			GUI_Connect_Server();
+		}
+		else if(WIFIFlag.ConnectServer == 2)
+		{
+			//GUI_Disconnect_Server();
+			atk_8266_send_cmd("AT+CIPCLOSE","OK",500);   //断开tcp连接
+			BackGroundCtrl.ConnectState = 1;	
+		}
+		WIFIFlag.ConnectServer = 0;
+	}
+	else if(WIFIFlag.WaitForWifi)
+	{
+		printf("wait for wifi\r\n");
+		WIFIFlag.WaitForWifi=0;
+		DisplayDialogMsg.x0	=80;
+		DisplayDialogMsg.y0	= 80;
+		DisplayDialogMsg.xSize = 300;
+		DisplayDialogMsg.ySize = 200;
+		DisplayDialogMsg.DialogTiltle= "提示";
+		DisplayDialogMsg.Editname = "请先连接wifi";
+		DisplayDialogMsg.hFrame = CreatMessageBox_OK(DialogSelectWiFi,&DisplayDialogMsg);
+		printf("DisplayDialogMsg.hFrame=%d\r\n",DisplayDialogMsg.hFrame);
+		while(!keypad_dev.Finish)
+		{
+			delay_ms(500);
+		}
+		keypad_dev.Finish=0;
 	}
 }
 

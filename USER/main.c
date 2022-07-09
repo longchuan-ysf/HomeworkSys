@@ -313,13 +313,12 @@ extern void test_post(void);
 void key_task(void *pdata)
 {
 	OS_ERR err;
-//	atk_8266_test();
-//	BackGroundInit();
+
 	camera_app_init();
 	u8 key;
 	while(1)
 	{
-//		MessageRxHandle();
+
 		if(CurrentPage==PAGE_CAMERA)
 		{			
 			key = KEY_Scan(0);
@@ -393,11 +392,14 @@ void led0_task(void *p_arg)
 	{
 		delay_ms(500);
 	}
+	
 	atk_8266_init();
 	atk_8266_test();
+	BackGroundInit();
 	while(1)
 	{
 		WIFI_Flag_Handle();
+		MessageRxHandle();
 		OSTimeDlyHMSM(0,0,0,50,OS_OPT_TIME_PERIODIC,&err);//—” ±50ms
 	}
 }

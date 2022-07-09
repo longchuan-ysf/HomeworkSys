@@ -302,7 +302,7 @@ void engkeypad_process(BUTTON_DATA *buttondata,int Id,WM_MESSAGE *pMsg)
         {
 			mymemset(keypad_dev.FinalData,0,sizeof(keypad_dev.FinalData));
 			EDIT_GetText(WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_EDIT9),(char *)keypad_dev.FinalData,sizeof(keypad_dev.FinalData));
-			keypad_dev.Finish = 1;
+			keypad_dev.Finish |= 0x01;
 			WM_DeleteWindow(DisplayDialogMsg.hFrame);
         }
         else
@@ -343,7 +343,7 @@ void numkeypad_process(BUTTON_DATA *buttondata,int Id,WM_MESSAGE *pMsg)
         {
 			mymemset(keypad_dev.FinalData,0,sizeof(keypad_dev.FinalData));
 			EDIT_GetText(WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_EDIT9),(char *)keypad_dev.FinalData,sizeof(keypad_dev.FinalData));
-			keypad_dev.Finish = 1;
+			keypad_dev.Finish |= 0x01;
 			WM_DeleteWindow(DisplayDialogMsg.hFrame);
         }
         else
@@ -638,19 +638,6 @@ static void _cbKeyPad(WM_MESSAGE * pMsg)
        
 	}
 }
-
-
-//背景窗口回调函数
-static void _cbBk(WM_MESSAGE * pMsg) 
-{
-	switch (pMsg->MsgId) 
-	{
-		case WM_PAINT:
-			GUI_DrawGradientV(0, 0,lcddev.width,lcddev.height, COLOR_BACK0, COLOR_BACK1);
-			break;
-	}
-}
-
 static void _cbDisplayInput(WM_MESSAGE * pMsg)
 {
 	WM_HWIN    hWin;
@@ -660,79 +647,15 @@ static void _cbDisplayInput(WM_MESSAGE * pMsg)
 	printf("%s MsgId=%d\r\n",__func__,pMsg->MsgId);
 	switch (pMsg->MsgId) 
 	{
-		case WM_NOTIFY_PARENT:	//告诉父窗口，子窗口发生了改变
-		{
-			//想当前焦点窗口发送按键消息
-			Id    = WM_GetId(pMsg->hWinSrc);
-			NCode = pMsg->Data.v;
-			printf("%s Id=%d NCode=%d\r\n",__func__,Id,NCode);
-			switch (NCode) 
-			{
-			}
-		}
-		break;
 		case WM_DELETE:
 		{
+			keypad_dev.Finish |= 0x02;
 			WM_DeleteWindow(pMsg->hWinSrc);
+			
 		}
 		break;
 	}
 }
-/*
-void keypad_demo(WM_HWIN WM_Parent,pDialog_MSG Msg) 
-{
-	WM_HWIN hFrame;
-	WM_HWIN hText;
-	WM_HWIN hEdit;
-
-//	WM_SetCallback(WM_HBKWIN, _cbBk);		        //是指背景窗口回调函数
-	
-	keypad_dev.xpos=0;
-	keypad_dev.ypos=(lcddev.height*6)/10;
-	keypad_dev.width=lcddev.width;
-	keypad_dev.height=lcddev.height-((lcddev.height*6)/10);
-	keypad_dev.padtype=ENGLISH_KEYPAD;				//默认为英文键盘
-	keypad_dev.signpad_flag=0;	
-	keypad_dev.signpad_num=2;
-    keypad_dev.inputlen=0;
-    keypad_dev.pynowpage=0;
-    keypad_dev.cur_index=0;
-    keypad_dev.sta=0;
-	
-	//设置keypad所使用的按钮的皮肤
-	BUTTON_SetDefaultSkin(_DrawSkinFlex_BUTTON); 	//设置BUTTON的皮肤
-	//创建keypad
-	keypad_dev.hKeypad = WM_CreateWindowAsChild(keypad_dev.xpos,keypad_dev.ypos,keypad_dev.width,keypad_dev.height, WM_Parent, WM_CF_SHOW | WM_CF_STAYONTOP, _cbKeyPad, 0);
-	
-	//设置notepad属性
-	BUTTON_SetDefaultSkin(BUTTON_SKIN_FLEX);
-	FRAMEWIN_SetDefaultSkin(FRAMEWIN_SKIN_FLEX);
-	FRAMEWIN_SetDefaultTextAlign(GUI_TA_HCENTER);
-
-	//创建FRAME窗口
-	hFrame = FRAMEWIN_CreateEx(Msg->x0, Msg->y0, Msg->xSize, Msg->ySize, WM_Parent, WM_CF_SHOW, 0, 0, (char *) Msg->DialogTiltle, _cbDisplayInput);
-	FRAMEWIN_SetTextColor(hFrame, GUI_YELLOW);
-	FRAMEWIN_SetFont(hFrame, &GUI_Font20_ASCII);
-	FRAMEWIN_AddCloseButton(hFrame,FRAMEWIN_BUTTON_RIGHT,0);
-	FRAMEWIN_SetClientColor(hFrame, GUI_LIGHTGRAY);
-	
-	
-	hText=TEXT_CreateEx(Msg->x0+10,Msg->y0+35,Msg->xSize-20,20,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
-	TEXT_SetFont(hText, &GUI_Font20_ASCII);
-	
-	
-	hEdit=EDIT_CreateEx(Msg->x0+10,Msg->y0+35+20,Msg->xSize-20,30,hFrame,WM_CF_SHOW,0,GUI_ID_EDIT9,(Msg->xSize)/8);
-	EDIT_SetFont(hEdit, &GUI_Font20_ASCII);
-	EDIT_EnableBlink(hEdit, 500, 1);
-	WM_SetFocus(hEdit);
-
-	
-//	while(1)
-//	{
-//		GUI_Delay(100);
-//	}
-}
-*/
 WM_HWIN  CreatDispalyDialog(WM_HWIN WM_Parent ,pDialog_MSG Msg)
 {
 	WM_HWIN hFrame;
@@ -755,6 +678,9 @@ WM_HWIN  CreatDispalyDialog(WM_HWIN WM_Parent ,pDialog_MSG Msg)
 	hEdit=EDIT_CreateEx(20,ys+20,Msg->xSize-40,30,hFrame,WM_CF_SHOW,0,GUI_ID_EDIT9,32);///最多32个字符
 	EDIT_SetFont(hEdit, &GUI_Font20_ASCII);
 	EDIT_EnableBlink(hEdit, 500, 1);
+	
+	keypad_dev.Finish = 0;
+	mymemset(keypad_dev.FinalData,0,sizeof(keypad_dev.FinalData));
 	//WM_SetFocus(hEdit);
 	return hFrame;
 }
@@ -783,3 +709,66 @@ void CreatKeypad(WM_HWIN WM_Parent,u16 x0, u16 y0, u16 xSize, u16 ySize)
 	BUTTON_SetDefaultSkin(BUTTON_SKIN_FLEX);
 	FRAMEWIN_SetDefaultSkin(FRAMEWIN_SKIN_FLEX);
 }
+
+WM_HWIN  CreatMessageBox_OK(WM_HWIN WM_Parent ,pDialog_MSG Msg)
+{
+	WM_HWIN hFrame;
+	WM_HWIN hText;
+//	WM_HWIN hButton;
+	uint16_t ys;
+		//创建FRAME窗口
+	hFrame = FRAMEWIN_CreateEx(Msg->x0, Msg->y0, Msg->xSize, Msg->ySize, WM_Parent, WM_CF_SHOW, 0, 0, (char *) Msg->DialogTiltle, _cbDisplayInput);
+	FRAMEWIN_SetTextColor(hFrame, GUI_YELLOW);
+	FRAMEWIN_SetFont(hFrame, &GUI_FontHZ16);
+	FRAMEWIN_AddCloseButton(hFrame,FRAMEWIN_BUTTON_RIGHT,0);
+	FRAMEWIN_SetClientColor(hFrame, GUI_LIGHTGRAY);
+	
+	ys = (Msg->ySize - 20-30)/2;//将信息置于中间
+
+	//Msg->xSize-40的40是前后各留20
+	hText=TEXT_CreateEx(102,ys,Msg->xSize-40,20,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
+	TEXT_SetFont(hText, &GUI_FontHZ16);
+	
+	
+//	ys = ys+40;
+//	xs = (Msg->xSize-60)/2;
+//	hButton = BUTTON_CreateEx(xs,ys,60,30,hFrame,WM_CF_SHOW,0,GUI_ID_BUTTON9);
+//	BUTTON_SetText(hButton,"ok");
+//	BUTTON_SetFont(hButton, &GUI_FontHZ16);
+//	
+//	WM_SetFocus(hButton);
+	keypad_dev.Finish = 0;
+	
+	return hFrame;
+}
+
+/*创造一个只带OK按钮的提示信息框*/
+//WM_HWIN  CreatMessageBox_OK(WM_HWIN WM_Parent ,pDialog_MSG Msg)
+//{
+//	WM_HWIN hFrame;
+//	WM_HWIN hText;
+//	WM_HWIN hButton;
+//	uint16_t ys;
+//	uint16_t xs;
+//		//创建FRAME窗口
+//	hFrame = FRAMEWIN_CreateEx(Msg->x0, Msg->y0, Msg->xSize, Msg->ySize, WM_Parent, WM_CF_SHOW, 0, 0, (char *) Msg->DialogTiltle, _cbMessageBox_OK);
+//	FRAMEWIN_SetTextColor(hFrame, GUI_YELLOW);
+//	FRAMEWIN_SetFont(hFrame, &GUI_FontHZ16);
+//	FRAMEWIN_AddCloseButton(hFrame,FRAMEWIN_BUTTON_RIGHT,0);
+//	FRAMEWIN_SetClientColor(hFrame, GUI_LIGHTGRAY);
+//	
+//	ys = (Msg->ySize - 20-30)/2;//将输入框置于中间
+//	//Msg->xSize-40的40是前后各留20
+//	xs = (Msg->xSize-strlen(Msg->Editname))/2;
+//	hText=TEXT_CreateEx(20,ys,Msg->xSize-40,20,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
+//	TEXT_SetFont(hText, &GUI_FontHZ16);
+//	
+//	xs = (Msg->xSize-60)/2;
+//	ys = ys+40;
+//	hButton = BUTTON_CreateEx(xs,ys,60,30,hFrame,WM_CF_SHOW,0,GUI_ID_BUTTON9);
+//	BUTTON_SetText(hButton,"ok");
+//	BUTTON_SetFont(hText, &GUI_FontHZ16);
+//	
+//	keypad_dev.Finish = 0;
+//	return hFrame;
+//}
