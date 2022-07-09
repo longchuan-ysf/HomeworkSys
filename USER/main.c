@@ -55,7 +55,7 @@ void emwindemo_task(void *p_arg);
 //设置任务优先级
 #define KEY_TASK_PRIO 				6
 //任务堆栈大小
-#define KEY_STK_SIZE				256
+#define KEY_STK_SIZE				512
 //任务控制块
 OS_TCB KeyTaskTCB;
 //任务堆栈
@@ -67,7 +67,7 @@ void key_task(void *p_arg);
 //设置任务优先级
 #define LED0_TASK_PRIO 				7
 //任务堆栈大小
-#define LED0_STK_SIZE				512
+#define LED0_STK_SIZE				(512+256)
 //任务控制块
 OS_TCB Led0TaskTCB;
 //任务堆栈

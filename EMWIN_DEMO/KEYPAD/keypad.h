@@ -321,10 +321,7 @@ typedef struct
 	WM_HWIN hFrame;//显示输入窗口
 	char *Editname;
 	char *DialogTiltle;
-//	uint8_t edit;//是否包含编辑框
-//	uint8_t OKbutton;//是否OK按钮
-//	uint8_t Cancelbutton;//是否cancel按钮
-//	uint8_t Progbar;//是否进度条
+	uint8_t *ImageFilePath;//显示图片的路径
 }Dialog_MSG,*pDialog_MSG;
 
 extern KEYPADStructTypeDef keypad_dev;		
@@ -332,4 +329,5 @@ extern KEYPADStructTypeDef keypad_dev;
 extern void CreatKeypad(WM_HWIN WM_Parent,u16 x0, u16 y0, u16 xSize, u16 ySize);
 extern WM_HWIN CreatDispalyDialog(WM_HWIN WM_Parent ,pDialog_MSG Msg);
 extern WM_HWIN  CreatMessageBox_OK(WM_HWIN WM_Parent ,pDialog_MSG Msg);
+extern WM_HWIN  CreatMessageBox_WaitConnect(WM_HWIN WM_Parent ,pDialog_MSG Msg);
 #endif

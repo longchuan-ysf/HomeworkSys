@@ -594,8 +594,11 @@ void SelectWiFiHandle(uint8_t index)
 		DisplayDialogMsg.ySize = 200;
 		DisplayDialogMsg.DialogTiltle= "提示";
 		DisplayDialogMsg.Editname = "请输入WiFi密码";
+//		CPU_SR_ALLOC();
+//		OS_CRITICAL_ENTER();	//进入临界区
 		DisplayDialogMsg.hFrame=CreatDispalyDialog(DialogSelectWiFi,&DisplayDialogMsg);
 		WM_SetFocus(WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_EDIT9));
+//		OS_CRITICAL_EXIT();	//退出临界区
 		while(!keypad_dev.Finish)
 		{
 			delay_ms(500);
@@ -644,48 +647,104 @@ description :连接到服务器
 
 void GUI_Connect_Server(void)
 {
-	uint8_t res,cnt;
-	WM_MESSAGE 	Msg;
+	uint8_t res,cnt,save;
+	WM_HWIN hItem;
+	uint8_t *ServerIP,*ServerPort;
 	u8 *p=mymalloc(SRAMIN,64);	
+	ServerIP=mymalloc(SRAMIN,16);	
+	ServerPort = mymalloc(SRAMIN,16);
+	
+	mymemset(ServerIP,0,16);
+	EDIT_GetText(EDIT_ServerIP,(char *)ServerIP,16);
+	printf("server ip=%s\r\n",ServerIP);
+	
+	mymemset(ServerPort,0,16);
+	EDIT_GetText(EDIT_ServerPort,(char *)ServerPort,16);
+	printf("server port=%s\r\n",ServerPort);
+	
+	/*判断是否需要保存新服务器IP和端口*/
+	save=0;
+	res = strcmp((char *)WiFiConfig.severip,(char *)ServerIP);
+	if(res)
+	{
+		myfree(SRAMIN,WiFiConfig.severip);
+		WiFiConfig.severip = mymalloc(SRAMIN,strlen((char *)ServerIP));
+		strcpy((char *)WiFiConfig.severip,(char *)ServerIP);
+		save=1;
+	}
+	res = strcmp((char *)WiFiConfig.port,(char *)ServerPort);
+	if(res)
+	{	
+		myfree(SRAMIN,WiFiConfig.port);
+		WiFiConfig.port = mymalloc(SRAMIN,strlen((char *)ServerPort));
+		strcpy((char *)WiFiConfig.port,(char *)ServerPort);
+		save=1;		
+	}
+	if(save)
+	{
+		printf("new server ip=%s,port=%s\r\n",WiFiConfig.severip,WiFiConfig.port);
+		Save_New_Wifi();
+	}
 
 	atk_8266_send_cmd("AT+CIPMUX=0","OK",500);   //0：单连接，1：多连接
-	sprintf((char*)p,"AT+CIPSTART=\"TCP\",\"%s\",%s",WiFiConfig.severip,(u8*)WiFiConfig.port);    //配置目标TCP服务器
+	
 	cnt=0;
+	DisplayDialogMsg.x0	=80;
+	DisplayDialogMsg.y0	= 80;
+	DisplayDialogMsg.xSize = 300;
+	DisplayDialogMsg.ySize = 200;
+	DisplayDialogMsg.DialogTiltle= "提示";
+	DisplayDialogMsg.Editname = "尝试连接tcp服务器\r\n请等待........";
+	BUTTON_SetDefaultSkin(BUTTON_SKIN_FLEX); 
+	CPU_SR_ALLOC();
+	OS_CRITICAL_ENTER();	//进入临界区
+	DisplayDialogMsg.hFrame = CreatMessageBox_WaitConnect(DialogSelectWiFi,&DisplayDialogMsg);
+	OS_CRITICAL_EXIT();	//退出临界区
+	hItem = WM_GetDialogItem(DisplayDialogMsg.hFrame, GUI_ID_TEXT8);
 	do
 	{
-		res = atk_8266_send_cmd(p,"OK",500);
+		sprintf((char*)p,"AT+CIPSTART=\"TCP\",\"%s\",%s",WiFiConfig.severip,(u8*)WiFiConfig.port);    //配置目标TCP服务器
+		res = atk_8266_send_cmd(p,"OK",200);	
 		cnt++;
-		if(cnt>=5)//尝试连接5次
+		if(keypad_dev.Finish&0x02)
+		{
+			printf("手动取消连接\r\n");
+			cnt=10;
+		}
+		else
+		{
+			sprintf((char *)p,"第%d次尝试",cnt);
+			TEXT_SetText(hItem,(char *)p);
+		}
+		if(!res)
+		{
+			WM_DeleteWindow(DisplayDialogMsg.hFrame);
+		}
+		if(cnt>=10)//尝试连接5次
 		{
 			ButtonFlag_sever=0;
 			BUTTON_SetBitmapEx(BUTTON_ServerSwitch,0,&buttonbmp_tab[0],0,0);
 			printf("ATK-ESP 连接TCP 服务器失败\r\n"); //连接失败	
-			myfree(SRAMIN,p);		//释放内存 		
+			WM_DeleteWindow(DisplayDialogMsg.hFrame);
+			myfree(SRAMIN,p);		//释放内存 	
+			myfree(SRAMIN,ServerIP);
+			myfree(SRAMIN,ServerPort);			
 			return;
-	
 		}
-	}
-	while(res);
 		
+	}while(res);
+	
+		
+	//WM_DeleteWindow(DisplayDialogMsg.hFrame);
 	atk_8266_send_cmd("AT+CIPMODE=1","OK",500);      //传输模式为：透传			
 	Usart3Data.USART3_RX_STA=0;
 	
 	BackGroundCtrl.ConnectState = 2;
     myfree(SRAMIN,p);		//释放内存 
+	myfree(SRAMIN,ServerIP);
+	myfree(SRAMIN,ServerPort);
 }
-/*************************************************
-function    :GUI_connect_server 
-input       :NULL
-output		:NULL
-return		:
-description :连接到服务器
-**************************************************/
 
-//void GUI_Disconnect_Server(void)
-//{
-//	atk_8266_send_cmd("AT+CIPCLOSE","OK",500);   //断开tcp连接
-//	BackGroundCtrl.ConnectState = 1;
-//}
 /*************************************************
 function    :WIFI_Flag_Handle 
 input       :NULL
@@ -722,7 +781,6 @@ void WIFI_Flag_Handle(void)
 		}
 		else if(WIFIFlag.ConnectServer == 2)
 		{
-			//GUI_Disconnect_Server();
 			atk_8266_send_cmd("AT+CIPCLOSE","OK",500);   //断开tcp连接
 			BackGroundCtrl.ConnectState = 1;	
 		}
@@ -738,8 +796,11 @@ void WIFI_Flag_Handle(void)
 		DisplayDialogMsg.ySize = 200;
 		DisplayDialogMsg.DialogTiltle= "提示";
 		DisplayDialogMsg.Editname = "请先连接wifi";
+//		CPU_SR_ALLOC();
+//		OS_CRITICAL_ENTER();	//进入临界区
 		DisplayDialogMsg.hFrame = CreatMessageBox_OK(DialogSelectWiFi,&DisplayDialogMsg);
-		printf("DisplayDialogMsg.hFrame=%d\r\n",DisplayDialogMsg.hFrame);
+//		OS_CRITICAL_EXIT();	//退出临界区
+
 		while(!keypad_dev.Finish)
 		{
 			delay_ms(500);

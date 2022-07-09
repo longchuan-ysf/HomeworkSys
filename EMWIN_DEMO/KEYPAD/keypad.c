@@ -11,7 +11,7 @@
 #include "WM.h"
 #include "HomeworkGUI.h"
 #include "malloc.h"
-
+#include "ff.h"
 WM_HWIN hMulti=0;       //多行文本
 KEYPADStructTypeDef keypad_dev;		
 
@@ -726,49 +726,45 @@ WM_HWIN  CreatMessageBox_OK(WM_HWIN WM_Parent ,pDialog_MSG Msg)
 	ys = (Msg->ySize - 20-30)/2;//将信息置于中间
 
 	//Msg->xSize-40的40是前后各留20
-	hText=TEXT_CreateEx(102,ys,Msg->xSize-40,20,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
+	hText=TEXT_CreateEx(102,ys,Msg->xSize-40,60,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
 	TEXT_SetFont(hText, &GUI_FontHZ16);
 	
 	
-//	ys = ys+40;
-//	xs = (Msg->xSize-60)/2;
-//	hButton = BUTTON_CreateEx(xs,ys,60,30,hFrame,WM_CF_SHOW,0,GUI_ID_BUTTON9);
-//	BUTTON_SetText(hButton,"ok");
-//	BUTTON_SetFont(hButton, &GUI_FontHZ16);
-//	
-//	WM_SetFocus(hButton);
 	keypad_dev.Finish = 0;
 	
 	return hFrame;
 }
 
-/*创造一个只带OK按钮的提示信息框*/
-//WM_HWIN  CreatMessageBox_OK(WM_HWIN WM_Parent ,pDialog_MSG Msg)
-//{
-//	WM_HWIN hFrame;
-//	WM_HWIN hText;
+WM_HWIN  CreatMessageBox_WaitConnect(WM_HWIN WM_Parent ,pDialog_MSG Msg)
+{
+	WM_HWIN hFrame;
+	WM_HWIN hText;
 //	WM_HWIN hButton;
-//	uint16_t ys;
-//	uint16_t xs;
-//		//创建FRAME窗口
-//	hFrame = FRAMEWIN_CreateEx(Msg->x0, Msg->y0, Msg->xSize, Msg->ySize, WM_Parent, WM_CF_SHOW, 0, 0, (char *) Msg->DialogTiltle, _cbMessageBox_OK);
-//	FRAMEWIN_SetTextColor(hFrame, GUI_YELLOW);
-//	FRAMEWIN_SetFont(hFrame, &GUI_FontHZ16);
-//	FRAMEWIN_AddCloseButton(hFrame,FRAMEWIN_BUTTON_RIGHT,0);
-//	FRAMEWIN_SetClientColor(hFrame, GUI_LIGHTGRAY);
-//	
-//	ys = (Msg->ySize - 20-30)/2;//将输入框置于中间
-//	//Msg->xSize-40的40是前后各留20
-//	xs = (Msg->xSize-strlen(Msg->Editname))/2;
-//	hText=TEXT_CreateEx(20,ys,Msg->xSize-40,20,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
-//	TEXT_SetFont(hText, &GUI_FontHZ16);
-//	
-//	xs = (Msg->xSize-60)/2;
-//	ys = ys+40;
-//	hButton = BUTTON_CreateEx(xs,ys,60,30,hFrame,WM_CF_SHOW,0,GUI_ID_BUTTON9);
-//	BUTTON_SetText(hButton,"ok");
-//	BUTTON_SetFont(hText, &GUI_FontHZ16);
-//	
-//	keypad_dev.Finish = 0;
-//	return hFrame;
-//}
+	uint16_t ys;
+	printf("CreatMessageBox_WaitConnect\r\n");
+	//创建FRAME窗口
+	hFrame = FRAMEWIN_CreateEx(Msg->x0, Msg->y0, Msg->xSize, Msg->ySize, WM_Parent, WM_CF_SHOW, 0, 0, (char *) Msg->DialogTiltle, _cbDisplayInput);
+	FRAMEWIN_SetTextColor(hFrame, GUI_YELLOW);
+	FRAMEWIN_SetFont(hFrame, &GUI_FontHZ16);
+	FRAMEWIN_AddCloseButton(hFrame,FRAMEWIN_BUTTON_RIGHT,0);
+	FRAMEWIN_SetClientColor(hFrame, GUI_LIGHTGRAY);
+	
+	ys = (Msg->ySize - 20-30)/2;//将信息置于中间
+
+	//Msg->xSize-40的40是前后各留20
+	hText=TEXT_CreateEx(80,ys,Msg->xSize-40,40,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT9,Msg->Editname);
+	TEXT_SetFont(hText, &GUI_FontHZ16);
+	
+	
+	hText=TEXT_CreateEx(102,ys+40,Msg->xSize-40,40,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT8,"第1次尝试");
+	TEXT_SetFont(hText, &GUI_FontHZ16);
+	TEXT_SetTextColor(hText,GUI_RED);
+	keypad_dev.Finish = 0;
+	printf("CreatMessageBox_WaitConnect ok\r\n");
+	return hFrame;
+}
+
+
+
+
+

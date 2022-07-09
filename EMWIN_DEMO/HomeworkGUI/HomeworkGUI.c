@@ -31,6 +31,7 @@
 #include "malloc.h"
 #include "common.h"
 #include "keypad.h"
+#include "gifdisplay.h"
 /*********************************************************************
 *
 *       Defines
@@ -52,6 +53,7 @@ WM_HWIN DialogSelectWiFi;
 
 WM_HWIN EDIT_ServerIP;
 WM_HWIN EDIT_ServerPort;
+
 WM_HWIN BUTTON_ServerSwitch;
 // USER START (Optionally insert additional defines)
 // USER END
@@ -422,6 +424,7 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 
 								WIFIFlag.WaitForWifi = 1;
 								printf("WaitForWifi\r\n");
+
 							}
 							else
 							{
@@ -432,15 +435,6 @@ static void _cbDialogPage3(WM_MESSAGE * pMsg) {
 								{
 									WIFIFlag.ConnectServer = 1;
 
-									hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_EDIT0);	
-									mymemset(Data,0,16);
-									EDIT_GetText(hItem,&Data[0],16);
-									printf("server ip=%s\r\n",Data);
-									
-									hItem = WM_GetDialogItem(pMsg->hWin, GUI_ID_EDIT1);	
-									mymemset(Data,0,16);
-									EDIT_GetText(hItem,&Data[0],16);
-									printf("server port=%s\r\n",Data);
 								}
 								else
 								{
