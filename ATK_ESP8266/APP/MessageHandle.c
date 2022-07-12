@@ -14,7 +14,13 @@
 #include "malloc.h"
 #include "common.h"
 #include "usbh_app.h"
+#include "ImageDisplay.h"
+#include "HomeworkGUI.h"
+
+#define Root_URL "/HFS"
 #define TEST_POST 0
+#define UPDATA_PICTURE_PATH "list.txt"
+Picture_List PictureList;
 
 #if TEST_POST==1
 const char testhead[] =\
@@ -44,7 +50,7 @@ const char testend[] =\
 #endif
 
 Http_Respon  HttpRespon;//http的响应头解析
-
+static uint8_t SaveDir[32];
 //文件拓展名和 ContentType-type之间的关系
 const Http_File_Attribute HttpFileAttribute[] =
 {
@@ -271,14 +277,25 @@ void MessageTx(void)
 void test_http_get()
 {
 	OS_ERR err;
-	char url[] = "/HFS/test.jpg";
+	char url[] = "/HFS/download/list.txt";
 	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
 	MessageTxInit(GET,(uint8_t *)&url[0]);	
 	MessageTx();
+    BackGroundCtrl.HttpRespone = 0;
 	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
 	HttpRespon.Method = GET;//标记等待GET回复
-
 }
+ void http_get(char *url)
+ {
+     OS_ERR err;
+     OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
+     MessageTxInit(GET,(uint8_t *)&url[0]);  
+     MessageTx();
+     BackGroundCtrl.HttpRespone = 0;
+     OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
+     HttpRespon.Method = GET;//标记等待GET回复
+ }
+
  /**
 ****************************************************************************************
 @brief:    Generate_Random_Name 生成随机名称
@@ -319,14 +336,19 @@ void Generate_Random_Name(void)
 
 uint8_t Http_Save_Date(uint8_t *data,uint32_t len)
 {
-	u16 PathLen,timeout;
-    pUSBH_WR_MSG pMsgWR;
 	
+    FIL fp;
+    FRESULT res;
+    char *path,*pData;
+    uint32_t br;
+	#if 0
+    u16 PathLen,timeout;
+    pUSBH_WR_MSG pMsgWR;
 	pMsgWR = USBH_Malloc_CtrlStruct();
-	PathLen = strlen((char *)HttpRespon.ContentDisposition)+strlen("3:/download/")+1;//1是结束符\0
+	PathLen = strlen((char *)HttpRespon.ContentDisposition)+strlen((char *)SaveDir)+1;//1是结束符\0
 	USBH_Malloc_Path(pMsgWR,PathLen);
 
-	sprintf((char *)pMsgWR->path,"%s%s","3:/download/",HttpRespon.ContentDisposition);
+	sprintf((char *)pMsgWR->path,"%s%s",&SaveDir[0],HttpRespon.ContentDisposition);
 
 	USBH_Malloc_WriteBuf(pMsgWR,WR_BUFF_EX,data);
 	
@@ -347,6 +369,60 @@ uint8_t Http_Save_Date(uint8_t *data,uint32_t len)
         }
 		delay_ms(10);//延时10ms
 	}
+    #else
+    path = mymalloc(SRAMIN,64);
+    if(!path)
+    {
+        printf("malloc path failed\r\n");
+        myfree(SRAMIN, path);
+        return 1;
+    }
+    mymemset(path, 0, sizeof(path));
+    //处理字节对齐问题，通过申请对齐的内存实现
+    pData = mymalloc(SRAMEX, len);
+    if(!pData)
+    {
+        printf("malloc pData failed\r\n");
+        myfree(SRAMIN, path);
+        myfree(SRAMEX, pData);
+        return 1;
+    }   
+    mymemcpy(pData, data, len);
+    
+    sprintf(path,"3:/download/%s",HttpRespon.ContentDisposition);
+    res=f_open(&fp,path,FA_WRITE|FA_CREATE_ALWAYS);
+    if(res)
+    {
+        printf("open %s failed\r\n",path);
+        myfree(SRAMIN, path);
+        return 1;
+    }
+    
+    res = f_write(&fp, pData, len,&br);
+	if(len!=br)
+	{
+		printf("write %s failed len!=br\r\n",path);
+        myfree(SRAMIN, path);
+        myfree(SRAMEX, pData);
+        f_close(&fp);
+        return 1;
+	}
+    if(res)
+    {
+        printf("write %s failed\r\n",path);
+        myfree(SRAMIN, path);
+        myfree(SRAMEX, pData);
+        f_close(&fp);
+        return 1;
+    }
+    
+    f_close(&fp);
+    myfree(SRAMIN, path);
+    myfree(SRAMEX, pData);
+	printf("save data ok\r\n");
+     return 0;
+    #endif
+   
 }
 
 
@@ -852,14 +928,378 @@ void HTTP_Handle(uint8_t *data,uint16_t len)
 		{
 			printf("data save err \r\n");
 			goto http_return;
-		}	
+		}
+        BackGroundCtrl.HttpRespone=1;
 	}
 http_return:
 	myfree(SRAMIN,HttpRespon.ContentDisposition);
 	myfree(SRAMIN,HttpRespon.ContentType);
 }
+void Free_PIC_List(void)
+{
+    
+   
+}
+/**
+****************************************************************************************
+@brief:    AnalysisList 分析文件列表
+@Input：   NULL
+@Output：  NULL
+@Return：  NULL
+@Warning:  NULL   
+@note:     龙川 2022-7-11
+****************************************************************************************
+ **/
+ void AnalysisList(uint8_t *data)
+{
+    char* pData;
+    char temp[32];
+    int number,cnt,i;
+    pData = (char *)data;
+
+    printf("pData = %s", pData);
+    memset(temp,0,sizeof(temp));
+    sscanf(pData,"number:%d\r\n", &number);
+    printf("number=%d\r\n", number);
+    if(PictureList.number)
+    {
+        printf("clear last list\r\n");
+        for( i=0;i<PictureList.number;i++)
+    	{
+    		myfree(SRAMIN,PictureList.Name[i]);
+    	}
+    	myfree(SRAMIN,PictureList.Name);
+    	PictureList.number=0;
+    }
 
 
+
+    PictureList.Name=(uint8_t**)mymalloc(SRAMIN,number*sizeof(uint8_t*));
+	PictureList.number = number;
+    while(number)
+    {
+        pData = strstr(pData, "\r\n");
+        pData += 2;
+        memset(temp, 0, sizeof(temp));
+        cnt = sscanf(pData, "%s\r\n", temp);
+        if (!cnt)
+        {
+            break;
+        }
+		i=PictureList.number-number;
+        PictureList.Name[i] =\
+        mymalloc(SRAMIN, strlen((char *)temp));
+        strcpy((char *)PictureList.Name[i],temp);
+        printf("temp%d=%s\r\n", i, PictureList.Name[i]);
+        number--;
+    }
+}
+  /**
+ ****************************************************************************************
+ @brief:    FoundMax 寻找数组中的最大值
+ @Input：   NULL
+ @Output：  NULL
+ @Return：  NULL
+ @Warning:  NULL   
+ @note:     龙川 2022-7-11
+ ****************************************************************************************
+  **/
+uint32_t FoundMax(uint32_t *Array,uint32_t ArraySize)
+{
+    uint32_t max = 0,i;
+    for(i=0; i<ArraySize; i++)
+    {
+        if(Array[i]>max)
+        max = Array[i];
+    } 
+    return  max;
+}
+ /**
+ ****************************************************************************************
+ @brief:    Move_last_Picture 将之前的图片移动到backup文件夹中
+ @Input：   NULL
+ @Output：  NULL
+ @Return：  NULL
+ @Warning:  NULL   
+ @note:     龙川 2022-7-11
+ ****************************************************************************************
+  **/
+  void Move_last_Picture(pFile_Scan Filelist)
+ {
+    FRESULT res = FR_OK;
+	FIL* pFile,*pFileBku;	//文件信息
+	DIR* dir;  	//目录
+	uint8_t *BackupPath,*data,*path,*FileName;
+    uint32_t num,MaxDataSize,br;
+	if(!Filelist->file_num)
+	{
+        printf("not scan file\r\n");
+        return;
+    }
+    /*******************************************
+    以下代码是为了检查文件夹是否存在，
+    不存在就创建文件夹
+    ***************************************/
+   
+    path = mymalloc(SRAMIN, 64);
+
+    BackupPath = mymalloc(SRAMIN, 64);
+    mymemset(BackupPath,0,sizeof(BackupPath));
+    sprintf((char *)BackupPath,"%sbackup",SaveDir);
+    printf("BackupPath=%s\r\n",BackupPath);
+	dir=(DIR*)mymalloc(SRAMIN,sizeof(DIR));
+	res=f_opendir(dir,(TCHAR *)BackupPath);
+    if(res == FR_NO_PATH)
+    {
+        printf("creat path\r\n");
+        res = f_mkdir((TCHAR *)BackupPath);
+        if(res)
+        {
+            printf("mkdir err!\r\n");
+            myfree(SRAMIN, BackupPath);
+            myfree(SRAMIN, path);
+            myfree(SRAMIN, dir);
+            return;
+        }
+    }
+	f_closedir(dir);
+
+    /*******************************************
+    以下代码是为了移动文件
+    ***************************************/
+	pFile=(FIL*)mymalloc(SRAMIN,sizeof(FIL));
+	if(!pFile)
+	{
+		
+		printf("file struct malloc err!\r\n");
+        myfree(SRAMIN, BackupPath);
+        myfree(SRAMIN, path);
+        myfree(SRAMIN, dir);
+        myfree(SRAMIN, pFile);
+        return;
+	}
+    pFileBku=(FIL*)mymalloc(SRAMIN,sizeof(FIL));
+	if(!pFileBku)
+	{
+		
+		printf("file backup struct malloc err!\r\n");
+        myfree(SRAMIN, BackupPath);
+        myfree(SRAMIN, path);
+        myfree(SRAMIN, dir);
+        myfree(SRAMIN, pFile);
+        myfree(SRAMIN, pFileBku);
+        return;
+	}
+    num = Filelist->file_num;
+    MaxDataSize = FoundMax(Filelist->file_size,Filelist->file_num);
+    data = mymalloc(SRAMEX,MaxDataSize+1);
+    if(!data)
+    {
+        printf("malloc for data err!\r\n");
+        myfree(SRAMIN, BackupPath);
+        myfree(SRAMIN, path);
+        myfree(SRAMIN, dir);
+        myfree(SRAMIN, pFile);
+        myfree(SRAMIN, pFileBku);
+        myfree(SRAMEX, data);
+        return;
+    }
+	while(num)
+	{
+        printf("move %s\r\n",Filelist->file_name[Filelist->file_num-num]);
+        res = f_open(pFile, Filelist->file_name[Filelist->file_num-num], FA_READ);
+        if(res)
+        {
+            printf("open %s failed\r\n",Filelist->file_name[Filelist->file_num-num]);
+            continue;
+        }
+        mymemset(data,0,MaxDataSize+1);
+        res = f_read(pFile, data, pFile->obj.objsize, &br);
+        if(res)
+        {
+            printf("read %s failed\r\n",Filelist->file_name[Filelist->file_num-num]);
+            continue;
+        }
+        f_close(pFile);
+        mymemset(path,0,sizeof(path));
+        FileName = (uint8_t *)strstr(Filelist->file_name[Filelist->file_num-num],".");
+        while(FileName[0] != '/')
+            FileName--;
+
+        sprintf((char *)path,"%s%s",BackupPath,FileName);
+        res = f_open(pFileBku, (TCHAR *)path, FA_WRITE|FA_CREATE_ALWAYS);
+        if(res)
+        {
+            printf("open %s failed\r\n",path);
+            continue;
+        }
+        res = f_write(pFileBku, data, pFile->obj.objsize, &br);
+        if(res)
+        {
+            printf("write %s failed\r\n",path);
+            continue;
+        }
+        f_close(pFileBku);
+
+        //删除源文件
+        res = f_unlink(Filelist->file_name[Filelist->file_num-num]);
+        if(res)
+        {
+            printf("delete %s failed\r\n",Filelist->file_name[Filelist->file_num-num]);
+            continue;
+        }
+		num--;
+    }
+	printf("move ok\r\n");
+	myfree(SRAMIN, BackupPath);
+	myfree(SRAMIN, path);
+    myfree(SRAMIN, dir);
+    myfree(SRAMIN, pFile);
+    myfree(SRAMIN, pFileBku);
+    myfree(SRAMEX, data);
+    return;
+}
+
+/**
+****************************************************************************************
+@brief:    Updata_Picture 更新图片状态机
+@Input：   NULL
+@Output：  NULL
+@Return：  NULL
+@Warning:  NULL   
+@note:     龙川 2022-7-10
+****************************************************************************************
+ **/
+void Updata_Picture(void)
+{
+    //更新文件状态机
+    static Updata_Pic_ENUM state=GET_LIST;
+    //TimeoutCnt计数
+    static uint32_t TimeoutCnt,timeout;
+    uint8_t *path,*data,*url;
+    UINT br;
+    FIL fp;
+    FRESULT fs;
+    //防止外界乱调用一定要是启动更新图片才能运转状态机
+    if(!BackgroundFlag.UpdataPicture)
+        return;
+    if(state)
+    {
+        TimeoutCnt+=BKG_DELAY;
+        if(TimeoutCnt>timeout)
+        {
+            printf("%s state timeout TimeoutCnt=%d timeout=%d\r\n",__func__,TimeoutCnt,timeout);
+            TimeoutCnt=0;
+            timeout=0;
+            BackgroundFlag.UpdataPicture=0;
+            return;
+        }
+    }
+    switch(state)
+    {
+        case GET_LIST://获取文件列表
+        {
+            printf("GET_LIST\r\n");
+            mymemset(SaveDir, 0, sizeof(SaveDir));
+            sprintf((char *)SaveDir,"3:/download/");
+            test_http_get();
+            TimeoutCnt=0;
+            timeout = BKG_DELAY*1000;//BKG_DELAY为10ms,最终等待10s
+            state=WAIT_FOR_LIST;
+        }break;
+        case WAIT_FOR_LIST://等待后台回复,回复后解析
+        {
+            if(BackGroundCtrl.HttpRespone)
+            {
+                printf("bkg respone start analysis\r\n");
+       
+                path = mymalloc(SRAMIN, 32);
+                mymemset(path, 0, 32);
+                sprintf((char *)path,"%s%s",SaveDir,UPDATA_PICTURE_PATH);
+          
+                fs = f_open(&fp,(TCHAR *)path,FA_READ);
+                if(fs)
+                {
+                    printf("open %s failed:%d\r\n ",path,fs);
+                    state=GET_LIST;
+                    BackgroundFlag.UpdataPicture=0;
+                    myfree(SRAMIN, path);
+                    return;
+                }
+                //因为可能会手动增加\r\n \0
+                data = mymalloc(SRAMEX, fp.obj.objsize+3);
+                
+                if(!data )
+                {
+                    printf("malloc data failed\r\n ");
+                    state=GET_LIST;
+                    BackgroundFlag.UpdataPicture=0;
+                    myfree(SRAMIN, path);
+                    myfree(SRAMEX, data);
+                    return;
+                }
+                mymemset(data,0,fp.obj.objsize+3);
+                fs = f_read(&fp, data, fp.obj.objsize,&br);
+                if(fs  )
+                {
+                    printf("read %s data failed:%d\r\n ",path,fs);
+                    state=GET_LIST;
+                    BackgroundFlag.UpdataPicture=0;
+                    myfree(SRAMIN, path);
+                    myfree(SRAMEX, data);
+                    f_close(&fp);
+                    return;
+                }             
+                data[fp.obj.objsize]=0x0d;
+                data[fp.obj.objsize+1]=0x0a;
+                
+                printf("data:\r\n%s\r\n",data);
+                AnalysisList(data);
+                Move_last_Picture(&DownloadPicture); 
+                myfree(SRAMIN, path);
+                myfree(SRAMEX, data);
+                f_close(&fp); 
+
+                state=DOWNLOAD_PIC;             
+                TimeoutCnt=0;
+                timeout = BKG_DELAY*1000;//BKG_DELAY为10ms,最终等待10s;
+            }
+        }break;
+        case DOWNLOAD_PIC://下载图片
+        {
+            if(PictureList.number)
+            {
+                url = mymalloc(SRAMEX,64);
+                mymemset(url, 0, sizeof(url));
+                sprintf((char *)url,"%s/download/%s",Root_URL,PictureList.Name[PictureList.number-1]);
+				printf("url = %s\r\n",url);
+                http_get((char *)url);
+				myfree(SRAMEX,url);
+                state=WAIT_FOR_DOWNLOAD;             
+                TimeoutCnt=0;
+                timeout = BKG_DELAY*10000;//BKG_DELAY为10ms,最终等待100s;
+            }
+        }break;
+        case WAIT_FOR_DOWNLOAD://下载图片
+        {
+            if(BackGroundCtrl.HttpRespone)
+            {
+                printf("download ok\r\n");
+				
+                state=GET_LIST;             
+                TimeoutCnt=0;
+                timeout = 0;
+                BackgroundFlag.UpdataPicture=0;
+            }
+
+        }break;
+        case UPDATA_PIC_LIST://更新图片显示列表
+        {
+
+        }break;
+    }
+    
+}
 /**
 ****************************************************************************************
 @brief:    MessageRxHandle 接收数据解析
@@ -885,26 +1325,51 @@ void  MessageRxHandle(void)
 			printf("Rx state: %d,Rx len:%d\r\n",BackGroundCtrl.RxState,BackGroundCtrl.Message_rxLen);
 			printf("Rx data:%s\r\n",BackGroundCtrl.Message_RXBuffer);
 			//处理完接收的数据
-			OSMutexPend (&Usart3Data_RX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);//请求互斥信号量,防止多线程在其他线程中修改发送区数据
+			//请求互斥信号量,防止多线程在其他线程中修改数据
+			OSMutexPend (&Usart3Data_RX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);
 			//http的响应都是以HTTP开头，如果找到
 			HttpRsp = (uint8_t *)strstr((char *)BackGroundCtrl.Message_RXBuffer,"HTTP");
 			if(HttpRsp)
 			{
 				datalen = BackGroundCtrl.Message_rxLen - (BackGroundCtrl.Message_RXBuffer - HttpRsp);
 				HTTP_Handle(HttpRsp,datalen);
+                
 			}
-			Usart3Data.USART3_RX_STA = 0;
-			mymemset(BackGroundCtrl.Message_RXBuffer,0,BackGroundCtrl.MaxRxBufferLen);
+            Usart3Data.USART3_RX_STA = 0;
+            mymemset(BackGroundCtrl.Message_RXBuffer,0,BackGroundCtrl.MaxRxBufferLen);
 			BackGroundCtrl.RxState = 0;
-			BackGroundCtrl.Message_rxLen = 0;
-			OSMutexPost(&Usart3Data_RX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量
+			BackGroundCtrl.Message_rxLen = 0;	
+            //释放互斥信号量
+			OSMutexPost(&Usart3Data_RX_MUTEX,OS_OPT_POST_NONE,&err);
 			
 		}
 	}
 
 	
 }
- 
+/**
+****************************************************************************************
+@brief:    MessageRxHandle 接收数据解析
+@Input：   NULL
+@Output：  NULL
+@Return：  NULL
+@Warning:  NULL   
+@note:     龙川 2022-6-11
+****************************************************************************************
+ **/
+
+void  BKG_Flag_Handle()
+{
+    if(BackgroundFlag.UpdataPicture)//更新图片
+    {
+        Updata_Picture();
+    }
+    else if(BackgroundFlag.POST_send)//上传图片
+    {
+
+    }
+}
+
 
  
  

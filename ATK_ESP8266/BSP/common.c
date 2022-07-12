@@ -8,6 +8,8 @@
 WiFi_config WiFiConfig;
 WIFI_FLAG_STRUCT WIFIFlag;
 SSID_SCAN_TABLE SSIDTable;
+
+uint32_t ResponeLen;
 /*************************************************
 function    :用默认值初始化WiFi配置参数
 input       :NULL
@@ -213,7 +215,7 @@ u8* atk_8266_check_cmd(u8 *str)
 	if(Usart3Data.USART3_RX_STA&RECEIVE_OK_MARK_U3)		//接收到一次数据了
 	{ 
 		Usart3Data.USART3_RX_BUF[Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3]=0;//添加结束符
-		printf("resp:%s\r\n",Usart3Data.USART3_RX_BUF);
+		printf("resp:\r\n%s\r\n",Usart3Data.USART3_RX_BUF);
 		strx=strstr((const char*)Usart3Data.USART3_RX_BUF,(const char*)str);
 	} 
 	return (u8*)strx;
@@ -242,9 +244,11 @@ u8 atk_8266_send_cmd(u8 *cmd,u8 *ack,u16 waittime)
 			{
 				if(atk_8266_check_cmd(ack))
 				{
+                    ResponeLen = Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3;
+                    Usart3Data.USART3_RX_STA=0;//外面有的地方还会用到
 					break;//得到有效数据 
 				}
-					Usart3Data.USART3_RX_STA=0;
+				Usart3Data.USART3_RX_STA=0;
 			} 
 		}
 		if(waittime==0)res=1; 
@@ -451,18 +455,18 @@ void atk_8266_scan(void)
 {
 	uint8_t *Respon;
 	while(atk_8266_send_cmd("AT+CWLAP","OK",200));
-	printf("cmd ok,decode\r\n");
-	Respon = mymalloc(SRAMEX,(Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3) + 1);
+	
+	Respon = mymalloc(SRAMEX,ResponeLen + 1);
 	if(!Respon)
 		return;
-	mymemset(Respon,0,(Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3) + 1);
+	mymemset(Respon,0,ResponeLen + 1);
 	if(!Respon)
 	{
 		printf("malloc for ssid scan respon err!");
 		return;
 	}
-	mymemcpy(Respon,Usart3Data.USART3_RX_BUF,Usart3Data.USART3_RX_STA&RECEIVE_LEN_MARK_U3);
-
+	mymemcpy(Respon,Usart3Data.USART3_RX_BUF,ResponeLen);
+    printf("cmd ok,decode Respon\r\n%s\r\n",Respon);
 	SSID_Scan_Decode(Respon);
 	printf("decode ok\r\n");
 	

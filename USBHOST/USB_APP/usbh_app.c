@@ -204,11 +204,11 @@ static void USBH_WR_MsgHandle(pUSBH_WR_MSG pUSBwrMsg)
 		{
 			RWLength = pUSBwrMsg->length;
 		}
-		res = f_open(&File,(const TCHAR*)pUSBwrMsg->path,pUSBwrMsg->mode);	//打开文件
+		res = f_open(&File,(const TCHAR*)pUSBwrMsg->path,pUSBwrMsg->mode|FA_CREATE_ALWAYS);	//打开文件
 		if(res != FR_OK)	
 		{
 			pUSBwrMsg->result  = res;
-			printf("write open %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
+			printf("write  %s failed,result = %d\r\n",pUSBwrMsg->path,pUSBwrMsg->result);
 			return ;
 		}	
 

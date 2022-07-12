@@ -86,6 +86,7 @@ Background_Flag BackgroundFlag;
  @note:     Áú´¨ 2019-4-18
  ****************************************************************************************
   **/
+ extern  Picture_List PictureList;
  void BackGroundInit(void)
  {
 	 memset(&BackGroundCtrl,0,sizeof(BackGroundCtrl));
@@ -101,6 +102,9 @@ Background_Flag BackgroundFlag;
 	 BackGroundCtrl.BackgroundSend = usart3_send;
 	 
 	 memset(&BackgroundFlag,0,sizeof(BackgroundFlag));
+
+     PictureList.Name = 0;
+     PictureList.number =0;
  }
 
  /**

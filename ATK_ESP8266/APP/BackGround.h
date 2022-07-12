@@ -18,6 +18,7 @@
 #include "FIFO.h"
 #include "sys.h"
 
+#define BKG_DELAY 10 // 当大于60左右就接受不到，因为USART3_RX_STA被修改了
 typedef enum
 {
 	BYTE_ = 0,//单字节数据
@@ -40,13 +41,15 @@ typedef struct
 	u32 MaxRxBufferLen;
 	
 	u8 RxState;//0表示没有收到数据，1表示收到数据
-	
+
+    u8 HttpRespone;//是否收到http的回复
 	void (*BackgroundSend)(u8 * data,u32 sendlen);//后台发送函数，根据实际情况指向实际发送函数
 }BackGround_Ctrl;
 
 typedef struct 
 {
 	uint32_t POST_send : 1;//发送post命令
+	uint32_t UpdataPicture : 1;//更新本地图片
 }Background_Flag;
 
 extern BackGround_Ctrl BackGroundCtrl;

@@ -49,6 +49,22 @@ typedef struct
 	uint8_t *ContentType;//文件大小数组
 }Http_File_Attribute;
 
+typedef struct 
+{
+	uint8_t** Name;//文件名指针数组
+	uint16_t number;//有多少图片
+}Picture_List;
+
+typedef enum 
+{
+	GET_LIST=0,
+    WAIT_FOR_LIST,
+    DOWNLOAD_PIC,
+    WAIT_FOR_DOWNLOAD,
+    UPDATA_PIC_LIST,
+    
+}Updata_Pic_ENUM;
+
 
 //http版本
 #define HTTP1_1 "HTTP/1.1"
@@ -63,7 +79,8 @@ typedef struct
 
                 
 
-extern void  MessageRxHandle(void);
+extern void MessageRxHandle(void);
+extern void BKG_Flag_Handle(void);
 
 
 #endif

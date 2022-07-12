@@ -13,6 +13,7 @@
 #include "delay.h"
 #include "jpegdisplay.h"
 #include "key.h"
+#include "BackGround.h"
 File_Scan DownloadPicture;//目录扫描结果存放
 
 uint8_t PictureIndex;
@@ -271,7 +272,7 @@ void Image_Display_Key(uint8_t key)
 	{ 	
 		switch(key)
 		{				    
-			case KEY0_PRES:	//对比度设置
+			case KEY0_PRES:	//下一张
 			{
 				if(PictureIndex<DownloadPicture.file_num-1)
 					PictureIndex++;
@@ -281,12 +282,17 @@ void Image_Display_Key(uint8_t key)
 				WM_InvalidateWindow(WM_Picture);//绘制图片
 			}
 			break;
-			case KEY1_PRES:	//执行一次自动对焦
+			case KEY1_PRES:	//更新
 			{
 				printf("%s KEY1_PRES\r\n",__func__);
+				if(BackGroundCtrl.ConnectState==2)
+				{
+                    BackgroundFlag.UpdataPicture=1;
+                    
+                }
 			}
 			break;
-			case KEY2_PRES:
+			case KEY2_PRES://上一张
 			{
 				if(PictureIndex>0)
 					PictureIndex--;

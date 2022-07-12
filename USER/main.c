@@ -63,17 +63,17 @@ CPU_STK KEY_TASK_STK[KEY_STK_SIZE];
 //led0任务
 void key_task(void *p_arg);
 
-//LED0任务
+//WIFI任务
 //设置任务优先级
-#define LED0_TASK_PRIO 				7
+#define WIFI_TASK_PRIO 				7
 //任务堆栈大小
-#define LED0_STK_SIZE				(512+256)
+#define WIFI_STK_SIZE				(512)
 //任务控制块
-OS_TCB Led0TaskTCB;
+OS_TCB WIFI_TaskTCB;
 //任务堆栈
-CPU_STK LED0_TASK_STK[LED0_STK_SIZE];
+CPU_STK WIFI_TASK_STK[WIFI_STK_SIZE];
 //led0任务
-void led0_task(void *p_arg);
+void wifi_task(void *p_arg);
 
 //USB任务
 //设置任务优先级
@@ -233,15 +233,15 @@ void start_task(void *p_arg)
                  (void*       )0,					
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR|OS_OPT_TASK_SAVE_FP,
                  (OS_ERR*     )&err);			 
-	//LED0任务
-	OSTaskCreate((OS_TCB*     )&Led0TaskTCB,		
-				 (CPU_CHAR*   )"Led0 task", 		
-                 (OS_TASK_PTR )led0_task, 			
+	//wifi任务
+	OSTaskCreate((OS_TCB*     )&WIFI_TaskTCB,		
+				 (CPU_CHAR*   )"WIFI task", 		
+                 (OS_TASK_PTR )wifi_task, 			
                  (void*       )0,					
-                 (OS_PRIO	  )LED0_TASK_PRIO,     
-                 (CPU_STK*    )&LED0_TASK_STK[0],	
-                 (CPU_STK_SIZE)LED0_STK_SIZE/10,	
-                 (CPU_STK_SIZE)LED0_STK_SIZE,		
+                 (OS_PRIO	  )WIFI_TASK_PRIO,     
+                 (CPU_STK*    )&WIFI_TASK_STK[0],	
+                 (CPU_STK_SIZE)WIFI_STK_SIZE/10,	
+                 (CPU_STK_SIZE)WIFI_STK_SIZE,		
                  (OS_MSG_QTY  )0,					
                  (OS_TICK	  )0,  					
                  (void*       )0,					
@@ -307,9 +307,9 @@ void emwindemo_task(void *p_arg)
 	   //OSTimeDlyHMSM(0,0,0,10,OS_OPT_TIME_PERIODIC,&err);//延时10ms
 	}
 }
-extern void test_http_post(void);
-extern void test_http_get(void);
-extern void test_post(void);
+
+extern void http_get(uint8_t *url);
+
 void key_task(void *pdata)
 {
 	OS_ERR err;
@@ -318,7 +318,6 @@ void key_task(void *pdata)
 	u8 key;
 	while(1)
 	{
-
 		if(CurrentPage==PAGE_CAMERA)
 		{			
 			key = KEY_Scan(0);
@@ -372,8 +371,8 @@ void Memory_Usage()
 	OSTaskStkChk(&TouchTaskTCB,&myfree,&myused,&err);
 	printf("TouchTaskTCB has free:%d, Usage:%%%d\r\n",myfree,(myused*100)/(myfree+myused));	//计算任务1的空闲字节数和堆栈使用率
 	
-	OSTaskStkChk(&Led0TaskTCB,&myfree,&myused,&err);
-	printf("Led0TaskTCB has free:%d, Usage:%%%d\r\n",myfree,(myused*100)/(myfree+myused));	//计算任务1的空闲字节数和堆栈使用率
+	OSTaskStkChk(&WIFI_TaskTCB,&myfree,&myused,&err);
+	printf("WiFiTaskTCB has free:%d, Usage:%%%d\r\n",myfree,(myused*100)/(myfree+myused));	//计算任务1的空闲字节数和堆栈使用率
 	
 	OSTaskStkChk(&KeyTaskTCB,&myfree,&myused,&err);
 	printf("KeyTaskTCB has free:%d, Usage:%%%d\r\n",myfree,(myused*100)/(myfree+myused));	//计算任务1的空闲字节数和堆栈使用率
@@ -383,8 +382,8 @@ void Memory_Usage()
 
 }
 
-//LED0任务
-void led0_task(void *p_arg)
+//wifi任务
+void wifi_task(void *p_arg)
 {
 	OS_ERR err;
 	OSTmrStart(&tmr1,&err);	//开启定时器1
@@ -400,7 +399,8 @@ void led0_task(void *p_arg)
 	{
 		WIFI_Flag_Handle();
 		MessageRxHandle();
-		OSTimeDlyHMSM(0,0,0,50,OS_OPT_TIME_PERIODIC,&err);//延时50ms
+        BKG_Flag_Handle();
+		OSTimeDlyHMSM(0,0,0,BKG_DELAY,OS_OPT_TIME_PERIODIC,&err);//延时50ms
 	}
 }
 //USBH_Process的主要处理任务

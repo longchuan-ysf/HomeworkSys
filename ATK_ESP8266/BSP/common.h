@@ -67,6 +67,9 @@ void WIFI_Flag_Handle(void);
 extern WiFi_config WiFiConfig;
 extern WIFI_FLAG_STRUCT WIFIFlag;
 extern SSID_SCAN_TABLE SSIDTable;
+
+extern uint32_t ResponeLen;
+
 #endif
 
 
