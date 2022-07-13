@@ -45,11 +45,18 @@ u8 ButtonFlag_wifi=0;
 u8 ButtonFlag_sever=0;
 
 GUI_BITMAP buttonbmp_tab[2];
+//显示作业图片控件和照相机数据控件
 WM_HWIN WM_Camera;//显示照相机数据
 WM_HWIN WM_Picture;//显示照片
+//显示wifi列表和连接列表
 WM_HWIN WM_WIFIList;//显示可用WiFi
 WM_HWIN WM_WIFIConnect;//显示连接wifi
+
+//主要的三页
+WM_HWIN ViewHomework;
+WM_HWIN UploadHomework;
 WM_HWIN DialogSelectWiFi;
+
 
 WM_HWIN EDIT_ServerIP;
 WM_HWIN EDIT_ServerPort;
@@ -91,7 +98,7 @@ static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage1[] = {
   { IMAGE_CreateIndirect,     "Image",   GUI_ID_IMAGE0,       0,    0,     470,     780,    IMAGE_CF_AUTOSIZE,            0,           0 },
  
  // { BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON1,    170,  690,    50,     60,     0},
-  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        170,  730,    120,     16,   TEXT_CF_LEFT                                },
+  { TEXT_CreateIndirect,      "",        GUI_ID_TEXT0,        170,  720,    120,     16,   TEXT_CF_LEFT                                },
   //{ BUTTON_CreateIndirect,    "",        GUI_ID_BUTTON2,      170+50+40,  690,    50,     60,     0},
 };  
 static const GUI_WIDGET_CREATE_INFO _aDialogCreatePage2[] = {
@@ -158,17 +165,20 @@ static void _cbDialogPage1(WM_MESSAGE * pMsg) {
 	break;
 	case WM_PAINT:	  
 	{
-		msg=mymalloc(SRAMIN,32);
-		
-		Display_Image_byIndex(WM_Picture,PictureIndex);
-		
-		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
-		TEXT_SetFont(hItem,&GUI_FontHZ16);
-		TEXT_SetTextColor(hItem,GUI_RED);
-		sprintf(msg,"第 %d 张/共 %d 张图",PictureIndex+1,DownloadPicture.file_num);
-		TEXT_SetText(hItem,msg);
-		
-		myfree(SRAMIN,msg);
+        if(PaintPic)
+        {
+    		msg=mymalloc(SRAMIN,32);
+    		
+    		Display_Image_byIndex(WM_Picture,PictureIndex);
+    		
+    		hItem = WM_GetDialogItem(hDlg, GUI_ID_TEXT0);
+    		TEXT_SetFont(hItem,&GUI_FontHZ16);
+    		TEXT_SetTextColor(hItem,GUI_RED);
+    		sprintf(msg,"第 %d 张/共 %d 张图",PictureIndex+1,DownloadPicture.file_num);
+    		TEXT_SetText(hItem,msg);	
+    		myfree(SRAMIN,msg);
+            PaintPic=0;
+        }
 	}
 	case WM_NOTIFY_PARENT:
 	{	
@@ -484,11 +494,11 @@ static void _cbDialog(WM_MESSAGE * pMsg) {
 		hItem = WM_GetDialogItem(pMsg->hWin, ID_MULTIPAGE_0);//hItem为多页控件
 		
 		//第一页
-		hDialog = GUI_CreateDialogBox(_aDialogCreatePage1, GUI_COUNTOF(_aDialogCreatePage1), _cbDialogPage1, WM_UNATTACHED, 0, 0);
-		MULTIPAGE_AddPage(hItem, hDialog, "查看作业");
+		ViewHomework = GUI_CreateDialogBox(_aDialogCreatePage1, GUI_COUNTOF(_aDialogCreatePage1), _cbDialogPage1, WM_UNATTACHED, 0, 0);
+		MULTIPAGE_AddPage(hItem, ViewHomework, "查看作业");
 		
-		hDialog = GUI_CreateDialogBox(_aDialogCreatePage2, GUI_COUNTOF(_aDialogCreatePage2), _cbDialogPage2, WM_UNATTACHED, 0, 0);
-		MULTIPAGE_AddPage(hItem, hDialog, "提交作业");
+		UploadHomework = GUI_CreateDialogBox(_aDialogCreatePage2, GUI_COUNTOF(_aDialogCreatePage2), _cbDialogPage2, WM_UNATTACHED, 0, 0);
+		MULTIPAGE_AddPage(hItem, UploadHomework, "提交作业");
 		
 		//第三页
 		DialogSelectWiFi = GUI_CreateDialogBox(_aDialogCreatePage3, GUI_COUNTOF(_aDialogCreatePage3), _cbDialogPage3, WM_UNATTACHED, 0, 0);

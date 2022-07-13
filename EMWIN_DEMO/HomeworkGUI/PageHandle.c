@@ -26,6 +26,7 @@ void PageHnadle_main(uint8_t PageIndex)
 		case PAGE_VIEW:
 		{
 			PictureIndex=0;
+            PaintPic=1;
 			WM_InvalidateWindow(WM_Picture);//ªÊ÷∆Õº∆¨
 			//Display_Image_byIndex(WM_Picture,PictureIndex);
 		}

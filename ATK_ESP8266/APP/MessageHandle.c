@@ -16,6 +16,9 @@
 #include "usbh_app.h"
 #include "ImageDisplay.h"
 #include "HomeworkGUI.h"
+#include "EmWinHZFont.h"
+#include "EmWinHZFont.h"
+#include "ImageDisplay.h"
 
 #define Root_URL "/HFS"
 #define TEST_POST 0
@@ -935,11 +938,7 @@ http_return:
 	myfree(SRAMIN,HttpRespon.ContentDisposition);
 	myfree(SRAMIN,HttpRespon.ContentType);
 }
-void Free_PIC_List(void)
-{
-    
-   
-}
+
 /**
 ****************************************************************************************
 @brief:    AnalysisList 分析文件列表
@@ -1170,13 +1169,17 @@ uint32_t FoundMax(uint32_t *Array,uint32_t ArraySize)
 @note:     龙川 2022-7-10
 ****************************************************************************************
  **/
+extern void test_ff(char* scan_dir,char* choose_file);
+extern void test_ff_free(void);
 void Updata_Picture(void)
 {
     //更新文件状态机
     static Updata_Pic_ENUM state=GET_LIST;
     //TimeoutCnt计数
     static uint32_t TimeoutCnt,timeout;
+
     uint8_t *path,*data,*url;
+    WM_HWIN hItem;
     UINT br;
     FIL fp;
     FRESULT fs;
@@ -1255,29 +1258,38 @@ void Updata_Picture(void)
                 
                 printf("data:\r\n%s\r\n",data);
                 AnalysisList(data);
-                Move_last_Picture(&DownloadPicture); 
+                Move_last_Picture(&DownloadPicture);               
+                f_close(&fp);
+                PictureList.option = PictureList.number;
+                
+                hItem = WM_GetDialogItem(ViewHomework, GUI_ID_TEXT0);
+        		TEXT_SetFont(hItem,&GUI_FontHZ16);
+        		TEXT_SetTextColor(hItem,GUI_RED);
+        		sprintf((char *)path,"第%d张/共%d张下载",\
+                    PictureList.number-PictureList.option+1,PictureList.number);
+        		TEXT_SetText(hItem,(char *)path);
+
                 myfree(SRAMIN, path);
                 myfree(SRAMEX, data);
-                f_close(&fp); 
-
                 state=DOWNLOAD_PIC;             
                 TimeoutCnt=0;
                 timeout = BKG_DELAY*1000;//BKG_DELAY为10ms,最终等待10s;
+                
             }
         }break;
         case DOWNLOAD_PIC://下载图片
         {
-            if(PictureList.number)
+            if(PictureList.option)
             {
                 url = mymalloc(SRAMEX,64);
                 mymemset(url, 0, sizeof(url));
-                sprintf((char *)url,"%s/download/%s",Root_URL,PictureList.Name[PictureList.number-1]);
+                sprintf((char *)url,"%s/download/%s",Root_URL,PictureList.Name[PictureList.option-1]);
 				printf("url = %s\r\n",url);
                 http_get((char *)url);
 				myfree(SRAMEX,url);
                 state=WAIT_FOR_DOWNLOAD;             
                 TimeoutCnt=0;
-                timeout = BKG_DELAY*10000;//BKG_DELAY为10ms,最终等待100s;
+                timeout = BKG_DELAY*20000;//BKG_DELAY为10ms,最终等待200s;
             }
         }break;
         case WAIT_FOR_DOWNLOAD://下载图片
@@ -1285,17 +1297,57 @@ void Updata_Picture(void)
             if(BackGroundCtrl.HttpRespone)
             {
                 printf("download ok\r\n");
+				//提示信息显示
+				hItem = WM_GetDialogItem(ViewHomework, GUI_ID_TEXT0);
+				TEXT_SetFont(hItem,&GUI_FontHZ16);
+				TEXT_SetTextColor(hItem,GUI_RED);
 				
-                state=GET_LIST;             
-                TimeoutCnt=0;
-                timeout = 0;
-                BackgroundFlag.UpdataPicture=0;
+                //释放内存
+                myfree(SRAMIN, PictureList.Name[PictureList.option-1]);
+                PictureList.option--;
+                if(PictureList.option)//继续下载图片
+                {
+                    printf("download next %d\r\n",PictureList.option);     
+                    //这里借用下path
+					path = mymalloc(SRAMIN, 32);
+					mymemset(path, 0, 32);
+					sprintf((char *)path,"第%d张/共%d张下载",\
+						PictureList.number-PictureList.option+1,PictureList.number);
+					TEXT_SetText(hItem,(char *)path);
+
+					myfree(SRAMIN, path);
+					
+                    state=DOWNLOAD_PIC;             
+                    TimeoutCnt=0;
+                    timeout = BKG_DELAY*1000;//BKG_DELAY为10ms,最终等待10s;
+                }
+                else//更新图片显示列表
+                {
+                    myfree(SRAMIN, PictureList.Name);
+					path = mymalloc(SRAMIN, 32);
+					mymemset(path, 0, 32);
+					sprintf((char *)path,"下载完成!");
+					TEXT_SetText(hItem,(char *)path);
+					myfree(SRAMIN, path);
+                    state=UPDATA_PIC_LIST;             
+                    TimeoutCnt=0;
+                    timeout = BKG_DELAY*1000;//BKG_DELAY为10ms,最终等待10s;
+                    
+                }
             }
 
         }break;
         case UPDATA_PIC_LIST://更新图片显示列表
         {
-
+            //先清空之前的记录
+            test_ff_free();
+            test_ff("3:/download","jpg");
+            PictureIndex=0;
+			PaintPic=1;
+			WM_InvalidateWindow(WM_Picture);//绘制图片
+			TimeoutCnt=0;
+            timeout = 0;//BKG_DELAY为10ms,最终等待10s;
+            BackgroundFlag.UpdataPicture=0;
         }break;
     }
     

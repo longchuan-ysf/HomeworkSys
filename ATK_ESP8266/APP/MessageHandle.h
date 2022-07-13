@@ -53,6 +53,7 @@ typedef struct
 {
 	uint8_t** Name;//文件名指针数组
 	uint16_t number;//有多少图片
+	uint16_t option;//当前正在操作的第几张照片
 }Picture_List;
 
 typedef enum 

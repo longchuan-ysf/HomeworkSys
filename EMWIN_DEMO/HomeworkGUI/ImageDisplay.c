@@ -17,6 +17,7 @@
 File_Scan DownloadPicture;//目录扫描结果存放
 
 uint8_t PictureIndex;
+uint8_t PaintPic=0;
 //释放内存，在读取完信息后进行释放
 void Dir_Scan_Free(File_Scan* pbuf)
 {
@@ -266,19 +267,20 @@ void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index)
 void Image_Display_Key(uint8_t key)
 {
 
-	if(DownloadPicture.file_num==1)//只有一张图片不需要切换显示，造成多次读写USB
-		return;
+	
 	if(key)
 	{ 	
 		switch(key)
 		{				    
 			case KEY0_PRES:	//下一张
 			{
+                if(DownloadPicture.file_num==1)//只有一张图片不需要切换显示，造成多次读写USB
+		            return;
 				if(PictureIndex<DownloadPicture.file_num-1)
 					PictureIndex++;
 				else
 					PictureIndex=0;
-				
+				PaintPic=1;
 				WM_InvalidateWindow(WM_Picture);//绘制图片
 			}
 			break;
@@ -294,11 +296,13 @@ void Image_Display_Key(uint8_t key)
 			break;
 			case KEY2_PRES://上一张
 			{
+                if(DownloadPicture.file_num==1)//只有一张图片不需要切换显示，造成多次读写USB
+		            return;
 				if(PictureIndex>0)
 					PictureIndex--;
 				else
 					PictureIndex=DownloadPicture.file_num-1;
-				
+				PaintPic=1;
 				WM_InvalidateWindow(WM_Picture);//绘制图片
 			}
 			break;

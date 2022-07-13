@@ -17,7 +17,12 @@ extern u8 ButtonFlag_wifi;
 extern u8 ButtonFlag_sever;
 
 extern Dialog_MSG DisplayDialogMsg;
+
+extern WM_HWIN ViewHomework;
+extern WM_HWIN UploadHomework;
 extern WM_HWIN DialogSelectWiFi;
+
+
 extern WM_HWIN CreateFramewin(void);
 
 #endif

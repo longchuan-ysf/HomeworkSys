@@ -318,7 +318,7 @@ typedef struct
 	uint16_t y0;
 	uint16_t xSize;
 	uint16_t ySize;
-	WM_HWIN hFrame;//显示输入窗口
+	WM_HWIN hFrame;//显示窗口
 	char *Editname;
 	char *DialogTiltle;
 	uint8_t *ImageFilePath;//显示图片的路径

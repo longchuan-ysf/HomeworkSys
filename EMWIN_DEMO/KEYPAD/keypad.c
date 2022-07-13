@@ -756,7 +756,7 @@ WM_HWIN  CreatMessageBox_WaitConnect(WM_HWIN WM_Parent ,pDialog_MSG Msg)
 	TEXT_SetFont(hText, &GUI_FontHZ16);
 	
 	
-	hText=TEXT_CreateEx(102,ys+40,Msg->xSize-40,40,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT8,"µÚ1´Î³¢ÊÔ");
+	hText=TEXT_CreateEx(102,ys+40,Msg->xSize-40,40,hFrame,WM_CF_SHOW,0,GUI_ID_TEXT8,"");
 	TEXT_SetFont(hText, &GUI_FontHZ16);
 	TEXT_SetTextColor(hText,GUI_RED);
 	keypad_dev.Finish = 0;

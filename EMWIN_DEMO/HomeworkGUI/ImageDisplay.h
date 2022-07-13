@@ -13,6 +13,8 @@ typedef struct
 }File_Scan,*pFile_Scan;
 
 extern uint8_t PictureIndex;
+extern uint8_t PaintPic;
+
 extern File_Scan DownloadPicture;//目录扫描结果存放
 
 extern void Display_Image_byIndex(IMAGE_Handle hObj,uint8_t index);
