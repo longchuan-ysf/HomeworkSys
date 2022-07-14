@@ -282,7 +282,9 @@ void usart3_send(u8 *data,u32 length)
     uint16_t sendlen;
 	OS_ERR err;
 	if(length>Usart3Data.USART3_MAX_SEND_LEN)
+	{
 		return;	
+	}
 	while(length)
 	{
         if(length>0xffff)
@@ -297,7 +299,7 @@ void usart3_send(u8 *data,u32 length)
 		
 		while(!(__HAL_DMA_GET_FLAG(&UART3TxDMA_Handler,DMA_FLAG_TCIF3_7)))//等待DMA2_Steam7传输完成
 		{
-			OSTimeDlyHMSM(0,0,0,1,OS_OPT_TIME_PERIODIC,&err);//延时1ms
+			//OSTimeDlyHMSM(0,0,0,1,OS_OPT_TIME_PERIODIC,&err);//延时1ms
 		}
         __HAL_DMA_CLEAR_FLAG(&UART3TxDMA_Handler,DMA_FLAG_TCIF3_7);//清除DMA2_Steam7传输完成标志
 		HAL_UART_DMAStop(&UART3_Handler);      //传输完成以后关闭串口DMA

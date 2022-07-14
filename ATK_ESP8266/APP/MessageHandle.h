@@ -79,6 +79,7 @@ typedef enum
 
 
                 
+extern void http_post(char* url,char* FileName,char *data,uint32_t Datalen);
 
 extern void MessageRxHandle(void);
 extern void BKG_Flag_Handle(void);

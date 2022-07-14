@@ -32,7 +32,7 @@ typedef struct
 #define RXBUFFERSIZE   1 //缓存大小
 
 #define USART3_CMD_BUFF_LEN     256
-#define USART3_DATA_BUFF_LEN     (1*1024*1024+10)//最大只允许1M的数据传输
+#define USART3_DATA_BUFF_LEN     (3*1024*1024+10)//最大只允许4M的数据传输
 
 
 	  	

@@ -271,8 +271,11 @@ void MessageTx(void)
 	printf("BackGround send:%d\r\n data:\r\n%s\r\n",BackGroundCtrl.Message_TxLen,BackGroundCtrl.Message_TXBuffer);
 	atk_8266_quit_trans();
 	atk_8266_send_cmd("AT+CIPSEND","OK",200);         //开始透传  
+	CPU_SR_ALLOC();
+    OS_CRITICAL_ENTER();	//进入临界区
 	BackGroundCtrl.BackgroundSend(BackGroundCtrl.Message_TXBuffer,BackGroundCtrl.Message_TxLen);
-	printf("BackGround send:ok\r\n");
+    OS_CRITICAL_EXIT();	//退出临界区
+    printf("BackGround send:ok\r\n");
 	
 
 }
@@ -641,13 +644,37 @@ post_return:
 	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量	
 	return ;
 }
+void http_post(char* url,char* FileName,char *data,uint32_t Datalen)
+{
+    
+	OS_ERR err; 
+    HttpRespon.Method = POST;//标记等待GET回复	
+    //请求互斥信号量,防止多线程在其他线程中修改发送区数据
+	OSMutexPend (&Usart3Data_TX_MUTEX,0,OS_OPT_PEND_BLOCKING,0,&err);
+	MessageTxInit(POST,(uint8_t *)url);
+	HTTP_Post_AddFileInfo((uint8_t *)FileName,(uint8_t *)data,Datalen);	
+	MessageTx();
+	OSMutexPost(&Usart3Data_TX_MUTEX,OS_OPT_POST_NONE,&err);//释放互斥信号量	
+	return ;
+}
 
 void test_http_post()
 {
+//    FIL file;
+//    uint8_t res;
+//    uint8_t *data;
+//    UINT br;
 	HttpRespon.Method = POST;//标记等待GET回复	
-	Http_Post_Date("zhongli.jpg","/HFS/");
- 
+	Http_Post_Date("news.jpg","/HFS/upload");
+//	res = f_open(&file,"3:/update/zhongli.jpg",FA_READ);
+//    data = mymalloc(SRAMEX, file.obj.objsize);
+//    f_read(&file, data, file.obj.objsize, &br);
+//    f_close(&file);
+//    http_post("/HFS/upload","zhongli.jpg",(char *)data,file.obj.objsize);
 }
+
+
+#if 0
 void test_post(void)
 {
     char result;
@@ -763,6 +790,7 @@ void test_post(void)
     );
     MessageTx();
 }
+#endif
  /**
 ****************************************************************************************
 @brief:    HTTP_Handle 解析http响应

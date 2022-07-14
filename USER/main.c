@@ -309,7 +309,7 @@ void emwindemo_task(void *p_arg)
 }
 
 extern void http_get(uint8_t *url);
-
+extern void test_http_post(void);
 void key_task(void *pdata)
 {
 	OS_ERR err;
@@ -318,6 +318,11 @@ void key_task(void *pdata)
 	u8 key;
 	while(1)
 	{
+//		key = KEY_Scan(0);
+//		if(key==KEY0_PRES)
+//		{
+//			test_http_post();
+//		}
 		if(CurrentPage==PAGE_CAMERA)
 		{			
 			key = KEY_Scan(0);

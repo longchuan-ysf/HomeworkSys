@@ -14,7 +14,9 @@
 #include "jpegcodec.h"
 #include "usbh_app.h"
 #include "buttonbmp.h"
-
+#include "string.h"
+#include "BackGround.h"
+#include "MessageHandle.h"
 u8 ovx_mode=0;							//bit0:0,RGB565模式;1,JPEG模式 
 u16 curline=0;							//摄像头输出数据,当前行编号
 u16 yoffset=50;							//y方向的偏移量
@@ -162,38 +164,72 @@ void rgb565_test(void)
 void camera_new_pathname(u8 *pname)
 {	 
 
+//	u16 index=0;
+//	index=rand();
+//	sprintf((char*)pname,"%s/%s/PIC%05d.jpg",SAVE_DISK,SAVE_FLODER,index);
+    u8 res;	
+	FIL ftemp;
 	u16 index=0;
-	index=rand();
-	sprintf((char*)pname,"%s/%s/PIC%05d.jpg",SAVE_DISK,SAVE_FLODER,index);
+    printf("%s\r\n",__func__);
+	while(index<0XFFFF)
+	{
+        sprintf((char*)pname,"%s/%s/PIC%05d.jpg",SAVE_DISK,SAVE_FLODER,index);
+		//sprintf((char*)pname,"0:PHOTO/PIC%05d.jpg",index);
+		res=f_open(&ftemp,(const TCHAR*)pname,FA_READ);//尝试打开
+		if(res)
+		{
+            if(res==FR_NO_FILE)
+                break;      //文件不存在
+            else
+                printf("res=%d\r\n",res);
+                
+		}
+		index++;
+	}
 }  
 uint8_t OV5640_Save_photo(void)
 {
-	uint8_t * pbuf,*dir;;
+	uint8_t *pbuf,*Directory,*path,*data,*Filename;
 	uint8_t res,headok;
-	uint32_t i,jpgstart,jpglen;
-	u16 timeout;
-    pUSBH_WR_MSG pMsgWR;
-	
-	dir = mymalloc(SRAMIN,16);
-	if(!dir)
+	uint32_t i,jpgstart,jpglen,br;
+    FIL *fp;
+    printf("%s\r\n",__func__);
+	Directory = mymalloc(SRAMIN,16);
+	if(!Directory)
 	{
 		printf("%s malloc dir err!\r\n",__func__);
 		return 1;
 	}
-	mymemset(dir,0,16);
-	sprintf((char *)dir,"%s/%s",SAVE_DISK,SAVE_FLODER);
+	mymemset(Directory,0,16);
+	sprintf((char *)Directory,"%s/%s",SAVE_DISK,SAVE_FLODER);
 	
-	res=f_mkdir((TCHAR *)dir);		//创建PHOTO文件夹
+	res=f_mkdir((TCHAR *)Directory);		//创建PHOTO文件夹
 	if(res!=FR_EXIST&&res!=FR_OK) 	//发生了错误
 	{	
 		printf("save err in open dir\r\n");	
+        myfree(SRAMIN, Directory);
 		return 2;		
 	}	
-	pMsgWR = USBH_Malloc_CtrlStruct();
 	
-	USBH_Malloc_Path(pMsgWR,30);
 	
-	camera_new_pathname(pMsgWR->path);
+    path = mymalloc(SRAMIN, 32);
+    if(!path)
+    {
+        printf("%s malloc path err!\r\n",__func__);
+        myfree(SRAMIN, Directory);
+        myfree(SRAMIN, path);
+		return 3;
+    }
+	fp = mymalloc(SRAMIN, sizeof(FIL));
+    if(!fp)
+    {
+        printf("%s malloc FIL err!\r\n",__func__);
+        myfree(SRAMIN, Directory);
+        myfree(SRAMIN, path);
+        myfree(SRAMIN, fp);
+		return 3;
+    }
+	camera_new_pathname(path);
 
 	printf("jpeg data size:%d\r\n",jpeg_data_len*4);//串口打印JPEG文件大小
 	pbuf=(u8*)jpeg_data_buf;
@@ -216,41 +252,54 @@ uint8_t OV5640_Save_photo(void)
 	if(jpglen)			//正常的jpeg数据 
 	{
 		pbuf+=jpgstart;	//偏移到0XFF,0XD8处
-		
-		USBH_Malloc_WriteBuf(pMsgWR,WR_BUFF_EX,pbuf);
-	
-		USBH_ApplyFor_WR(pMsgWR,jpglen,FA_WRITE|FA_CREATE_ALWAYS);
-		
-		timeout = 0;
-		while(1)
+		data = mymalloc(SRAMEX, jpglen);//防止出现字节对齐问题
+        if(!data)
+        {
+            printf("%s malloc data err!\r\n",__func__);
+            myfree(SRAMIN, Directory);
+            myfree(SRAMIN, path);
+            myfree(SRAMIN, fp);
+            myfree(SRAMEX, data);
+    		return 3;
+        }
+        mymemcpy(data, pbuf, jpglen);
+		res=f_open(fp, (TCHAR *) path, FA_WRITE|FA_CREATE_NEW);
+        if(res)
+        {
+            printf("%s open %s failed!\r\n",__func__,path);
+            myfree(SRAMIN, Directory);
+            myfree(SRAMIN, path);
+            myfree(SRAMIN, fp);
+            myfree(SRAMEX, data);
+    		return 4;
+        }
+        res=f_write(fp, data,jpglen,&br);
+        if(res)
+        {
+            printf("%s open %s failed!\r\n",__func__,path);
+            myfree(SRAMIN, Directory);
+            myfree(SRAMIN, path);
+            myfree(SRAMIN, fp);
+            myfree(SRAMEX, data);
+    		return 4;
+        }
+        f_close(fp);
+		printf("save date ok!\r\n");
+		//连上后台，开始上传
+		Filename = path+strlen((char *) path);
+		Filename -= 12;
+		printf("Filename = %s\r\n",Filename);
+		if(BackGroundCtrl.ConnectState==2)
 		{
-			timeout++;
-			if(pMsgWR->result==FR_OK)
-			{
-				USBH_WR_MsgFree(pMsgWR);
-				printf("write ok\r\n");
-				res= 0;
-				break;
-			}
-			if(timeout>10*1000)//10s的超时判断
-			{
-				res= 3;
-				break;
-			}
-			delay_ms(10);//延时10ms
+			http_post((char *)"/HFS/upload",(char *)Filename,(char *)data,jpglen);
 		}
-		if(pMsgWR->bread!=jpglen)
-			res=4; 
-		
 	}
-	else
-	{
-		res=5; 
-	}
-	
 	jpeg_data_len=0;
-	
-	
+    
+    myfree(SRAMIN, Directory);
+    myfree(SRAMIN, path);
+    myfree(SRAMIN, fp);
+    myfree(SRAMEX, data);
 	return res;
 }
 //OV5640拍照jpg图片
@@ -266,7 +315,7 @@ u8 ov5640_jpg_photo(void)
 	jpeg_data_ok=0;
 	jpeg_data_len=0;	
 	OV5640_JPEG_Mode();						//JPEG模式  
-	OV5640_OutSize_Set(16,4,2592,1944);		//设置输出尺寸(500W)  
+	OV5640_OutSize_Set(16,4,800,600);		//设置输出尺寸(SVGA(800*600))  
 	dcmi_rx_callback=jpeg_dcmi_rx_callback;	//JPEG接收数据回调函数
 	DCMI_DMA_Init((u32)dcmi_line_buf[0],(u32)dcmi_line_buf[1],jpeg_line_size,DMA_MDATAALIGN_WORD,DMA_MINC_ENABLE);//DCMI DMA配置    
 	DCMI_Start(); 			//启动传输  

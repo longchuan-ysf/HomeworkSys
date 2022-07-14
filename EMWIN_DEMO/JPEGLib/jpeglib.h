@@ -14,6 +14,10 @@
 #ifndef JPEGLIB_H
 #define JPEGLIB_H
 
+#include "ff.h"
+#include "stdint.h"
+#include "stdio.h"
+
 /*
  * First we include the configuration files that record how this
  * installation of the JPEG library is set up.  jconfig.h can be
@@ -971,8 +975,8 @@ EXTERN(void) jpeg_destroy_decompress JPP((j_decompress_ptr cinfo));
 
 /* Standard data source and destination managers: stdio streams. */
 /* Caller is responsible for opening the file before and closing after. */
-EXTERN(void) jpeg_stdio_dest JPP((j_compress_ptr cinfo, FILE * outfile));
-EXTERN(void) jpeg_stdio_src JPP((j_decompress_ptr cinfo, FILE * infile));
+EXTERN(void) jpeg_stdio_dest JPP((j_compress_ptr cinfo, FIL * outfile));
+EXTERN(void) jpeg_stdio_src JPP((j_decompress_ptr cinfo, FIL * infile));
 
 /* Data source and destination managers: memory buffers. */
 EXTERN(void) jpeg_mem_dest JPP((j_compress_ptr cinfo,
